@@ -1,36 +1,39 @@
-
-import { Rabbit } from "src/shared/rabbit";
-
-import { MessageQueueConsumer } from "../consumers/message.consumer";
-import { MessageQueueProducer } from "../porducers/message.producer";
-import { MessageWorker } from "../workers/message.worker";
-import messageFilterResolver, { MessageFilterQueueResolver } from "./message-filter.resolver";
+import * as amqp from 'amqplib';
+// Rabbit
+import { Rabbit } from "../../shared/rabbit";
+// Consumers
+import { MessageQueueConsumer } from "../consumers";
+// Producers
+import { MessageQueueProducer } from "../porducers";
+// Workers
+import { MessageWorker } from "../workers";
+// Resolvers
+import { MessageFilterQueueResolver } from "./message-filter.resolver";
 
 /**
  * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
  * - Разрешение логики добавления запроса для вебхука в очередь
  * - Разрешение логики обработки запроса для вебхука из очереди
  */
-class MessageQueueResolver {
-      /**
-     * Ссылка на инстанс WebHooks.js для обработки шага
+export class MessageQueueResolver {
+    /**
+     * Ссылка на инстанс Worker
      */
     private messageWorker!: MessageWorker;
     /**
      * Префикс для именования очередей
      */
-
-    private keyPrefix = 'message-read-check';
+    private keyPrefix = 'message-check';
     /**
      * ID сервера, на котором запущен процесс
      */
     private server_id = 0;
     /**
-     * Ссылка на инстанс WebHookPrepareProducer.js
+     * Ссылка на инстанс Producer
      */
     private producer = new MessageQueueProducer();
     /**
-     * Ссылка на инстанс WebHookPrepareConsumer.js
+     * Ссылка на инстанс Consumer
      */
     private consumer = new MessageQueueConsumer();
     /**
@@ -47,133 +50,111 @@ class MessageQueueResolver {
         this.consumer.setRabbitProvider(this.rabbitWorker);
     }
 
-
     /**
-     * Обработка ошибок
+     * Обработку и добавление очередей начнем только после соединения с базой данных
+     * Рекомендуется создавать по 1 каналу для отправки и получения сообщения на один процесс
+     * То есть для 1 запущенного процесса создаем
+     * - 1 постоянное соединение
+     * - 2 канала в режиме confirm для публикации и потребления сообщений
      */
-    error(e: Error) {
-        const data = new Date();
-        console.error(data.toLocaleString() + ' | ', e.message);
-    }
-
-
-    async start() {
-        /**
-         * Обработку и добавление очередей начнем только после соединения с базой данных
-         * Рекомендуется создавать по 1 каналу для отправки и получения сообщения на один процесс
-         * То есть для 1 запущенного bot.js создаем
-         * - 1 постоянное соединение
-         * - 2 канала в режиме confirm для публикации и потребления сообщений
-         */
+    public async start(): Promise<void> {
         try {
             await this.rabbitWorker.createConnection();
 
-            let queueName = this.getQueueName();
-    
+            console.log('MESSAGE: 1.Create rabbit connection');
+
+            const queueName = this.getQueueName();
+
             await this.producer.start();
             await this.producer.assertQueue(queueName);
-    
+
             await this.consumer.start();
             await this.addConsumer(queueName);
         } catch (e) {
-            this.error(e);
+            console.log(e);
+            throw e;
         }
     }
 
-
-
-    /**
-     * @param id
-     */
-    setServerId(id) {
+    public setServerId(id: number): void {
         this.server_id = id;
     }
-  
 
-    setMessageWorker(worker) {
+    public setMessageWorker(worker: any): void {
         this.messageWorker = worker;
     }
 
-    setSenderQueue(queue) {
-        this.sender_queue = queue;
-    }
-
-    setTryQueue(queue){
-        this.try_queue = queue;
-    }
-
-
     /**
      * Добавляет потребителя для сообщений очереди routing_key
-     * @param {string} routingKey
-     * @returns {Promise<void>}
+     * @param {string} queueName - название очереди
      */
-    async addConsumer(routingKey: string) {
+    public addConsumer(queueName: string): void {
 
-        // const consumerTag = `bot_${this.server_id}`;
-
-        let options = {
-            noAck: false,
-            // consumerTag: consumerTag
-        };
-
-
-        this.consumer.consume(routingKey, (message) => {
+        this.consumer.consume(queueName, async (message) => {
             if (message) {
 
-                let item = {};
+                console.log(await this.checkQueue(this.getQueueName()));
 
-                if ( this.messageWorker.goups[message.group_id ] === false) {
-                    // создаём очередь my_qeueu_ + group_id
+                const content = JSON.parse(message.content.toString());
 
-                    
+                const resolver = new MessageFilterQueueResolver();
+                resolver.setServerId(0);
+                resolver.setMessageWorker(this.messageWorker);
+                await resolver.start();
+                // let item = {};
 
-                  
+                // if (this.messageWorker.goups[message.group_id] === false) {
+                //     // создаём очередь my_qeueu_ + group_id
 
-                    item.filter = new MessageFilterQueueResolver();
-                    item.filter.setServerId(0);
-                    item.filter.setMessageWorker(this.messageWorker);
-                    await item.filter.start();
 
-                    
 
-                    
-                    this.messageWorker.goups[message.group_id ] = item;
+                //     this.messageWorker.goups[message.group_id] = item;
 
-                    
-                } else {
-                    item =  this.messageWorker.goups[message.group_id] ;
-                }
-                    //пушим в нее mwssage
+                // } else {
+                //     item = this.messageWorker.goups[message.group_id];
+                // }
+                // //пушим в нее mwssage
 
-                item.filter.add(message);
+                // item.filter.add(message);
             }
 
-        }, options);
+        }, { noAck: false });
+    }
+
+    /**
+     * Создание очереди
+     * @param {string} queueName  - название очереди
+     * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
+     */
+    public async checkQueue(queueName: string): Promise<amqp .Replies.AssertQueue> {
+        try {
+            const ok = await this.rabbitWorker.checkQueue(queueName);
+            return ok;
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
     }
 
     /**
      * Формирует название новой очереди для добавления
-     * префикс + id сервера на котором запущен процесс
-     * @returns {string}
      */
-    getQueueName() {
+    public getQueueName(): string {
         return `${this.keyPrefix}`;
     }
 
-    add(params) {
-        let queueName = this.getQueueName();
-        return this.producer.pushMessage(queueName, {type: 'webhook_prepare', payload: params});
+    public publishMessage(payload: any): void {
+        const queueName = this.getQueueName();
+        this.producer.publishMessage(queueName, { type: 'webhook_prepare', payload });
     }
 
-    deleteQueue(){
-        this.RabbitWorker.deleteQueue(this.getQueueName(), {ifEmpty: true}, () => {
+    public async deleteQueue(): Promise<void> {
+        try {
+            await this.rabbitWorker.deleteQueue(this.getQueueName(), { ifEmpty: true });
             console.log('deleteQueue PREPARE');
-        });
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
     }
-
-    
-
 }
-
-export default new MessageQueueResolver();

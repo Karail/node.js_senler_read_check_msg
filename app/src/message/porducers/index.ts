@@ -1,2 +1,2 @@
-export { default as messageProducer } from './message.producer';
-export { default as messageFilterProducer } from './message-filter.producer';
+export { MessageQueueProducer } from './message.producer';
+export { MessageFilterQueueProducer } from './message-filter.producer';

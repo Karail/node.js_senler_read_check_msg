@@ -1,55 +1,49 @@
-import { Rabbit } from "src/shared/rabbit";
+import * as amqp from 'amqplib';
+// Rabbit
+import { Rabbit } from "../../shared/rabbit";
 
 export class MessageFilterQueueProducer {
 
     private rabbitProvider!: Rabbit;
     private consumer!: any;
 
-    setRabbitProvider(rabbitProvider: Rabbit) {
+    public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
 
     /**
      * Инициализирующий метод модуля
      */
-    async start() {
+    public async start(): Promise<void> {
         await this.rabbitProvider.createChannel();
-        console.log('MESSAGE-Filter: 3.Create rabbit producer channel');
+        console.log('MESSAGE-FILTER: 3.Create rabbit producer channel');
     }
 
     /**
      * Создание очереди, если ее не существует и получение дополнительных параметров по очереди
      * - Количество сообщений
      * - Количество получателей (consumer)
-     * @param {string} routing_key
-     * @returns {Promise<*>}
+     * @param {string} queueName - название очереди
      */
-    async assertQueue(routingKey: string) {
-        if (this.rabbitProvider.publishChannel) {
-            //this.info('Consume already exist', vk_group_id);
-            console.log('Consume already exist prepare');
-            //  return false;
-        }
-
+    public async assertQueue(queueName: string): Promise<amqp.Replies.AssertQueue> {
         try {
-            const ok = await this.rabbitProvider.assertQueue(routingKey, {
+            const ok = await this.rabbitProvider.assertQueue(queueName, {
                 durable: false, maxPriority: 10
             });
-            console.log(ok);
+            return ok;
         } catch (e) {
             console.log(e);
+            throw e;
         }
     }
-    
+
     /**
-     * Публикация сообщения
-     * @param {string} routing_key
-     * @param {any} message
-     * @returns {Promise<*>}
+     * Отправка сообщения в очередь
+     * @param {string} queueName - название очереди
+     * @param {string} message - сообщение
+     * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
-    async pushMessage(routingKey: string, message: any) {
-        const res = await this.rabbitProvider.publishMessage(routingKey, JSON.stringify(message));
-        return res;
+    public publishMessage(queueName: string, message: any, options?: amqp.Options.Publish): void {
+        this.rabbitProvider.publishMessage(queueName, JSON.stringify(message), options);
     }
 }
-export default new MessageFilterQueueProducer();

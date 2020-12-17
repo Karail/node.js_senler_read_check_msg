@@ -1,5 +1,5 @@
 import * as amqp from 'amqplib';
-// Queue
+// Rabbit
 import { Rabbit } from "../../shared/rabbit";
 
 export class MessageQueueConsumer {
@@ -9,31 +9,33 @@ export class MessageQueueConsumer {
      */
     private rabbitProvider!: Rabbit
 
-    setRabbitProvider(rabbitProvider: Rabbit) {
+    setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
 
     /**
      * Инициализирующий метод модуля
      */
-    async start() {
+    async start(): Promise<void> {
         await this.rabbitProvider.createConsumeChannel();
         console.log('MESSAGE: 2.Create rabbit consume channel');
     }
 
     /**
-     * Создание нового потребиителя для очереди
-     * @param {string} queueName
-     * @param {Function} message_callback
-     * @param {amqp.Options.Consume} options
+     * Создание потребяителя для очереди
+     * @param {string} queueName - Название очереди
+     * @param {Function} callback - Коллбэк для обработки нового сообщения
+     * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
-    async consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume) {
-        this.rabbitProvider.consume(queueName, (message) => {
-            callback(message);
-        }, options);
+    consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume): void {
+        this.rabbitProvider.consume(queueName, callback, options);
     }
 
-    async cancelConsuming(consumerTag: string) {
+    /**
+     * отменяет прослушивание по тэгу
+     * @param {string} consumerTag тэг прослушивателя
+     */
+    cancelConsuming(consumerTag: string): void {
         this.rabbitProvider.cancelConsuming(consumerTag);
     }
 
@@ -41,8 +43,7 @@ export class MessageQueueConsumer {
      * Подтвердить обработку сообщения
      * @param {amqp.Message} message
      */
-    ackMessage(message: amqp.Message) {
+    ackMessage(message: amqp.Message): void {
         this.rabbitProvider.ackMessage(message);
     }
 }
-export default new MessageQueueConsumer();

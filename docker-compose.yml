@@ -9,18 +9,12 @@ services:
     command: npm start
     volumes:
       - ./app:/usr/src/app
-    networks:
-      - app-network
     links:
       - rabbitmq
     depends_on:
       - rabbitmq
+    ports:
+      - "3003:3000"
 
   rabbitmq:
     image: rabbitmq:3.7.4
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge

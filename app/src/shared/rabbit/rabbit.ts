@@ -3,11 +3,22 @@ import * as request from 'request-promise';
 
 export class Rabbit {
 
-    public amqpConnection!: amqp.Connection;  //Хранит соединение с RabbitMQ
-    public publishChannel!: amqp.ConfirmChannel;  //Хранит один канал для producer
-    public consumeChannel!: amqp.Channel;
+    /**
+     * Хранит соединение с RabbitMQ
+     */
+    public amqpConnection!: amqp.Connection;
+    /**
+     * Хранит один канал для producer
+     */
+    public publishChannel!: amqp.ConfirmChannel;
+    /**
+     * Хранит один канал в режиме подтверждения
+     */
+    public consumeChannel!: amqp.ConfirmChannel;
 
-    constructor(private readonly connectionLinkOptions?: any) { }
+    constructor(
+        private readonly connectionLinkOptions?: any
+    ) { }
 
     /**
      * Создание ссылки подключения к брокеру
@@ -16,11 +27,32 @@ export class Rabbit {
         return process.env.RABBITMQ_URL || '';
     }
 
-    public getQueuesApiUrl() {
+    /**
+     * Создание ссылки api для get очередей
+     */
+    public getQueuesApiUrl(): string {
         return ``;
     }
 
-    public async getQueuesList(name: string) {
+    /**
+     * Создание очереди
+     * @param {string} queueName  - название очереди
+     * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
+     */
+    public async checkQueue(queueName: string): Promise<amqp.Replies.AssertQueue> {
+        try {
+            const ok = await this.publishChannel.checkQueue(queueName);
+            return ok;
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
+    }
+    /**
+     * Возвращает список очередей по имени
+     * @param {string} name 
+     */
+    public async getQueuesList(name: string): Promise<any[]> {
 
         try {
 
@@ -34,11 +66,11 @@ export class Rabbit {
                 const request_api_url = `${this.getQueuesApiUrl()}?page=${page}&page_size=100&name=${name}&use_regex=true&pagination=true`;
                 let response = await request.get({
                     url: request_api_url
-                })
+                });
 
                 response = JSON.parse(response);
 
-                if (response && response.items) {
+                if (response?.items) {
 
                     items = [...items, ...response.items]
                     page_count = response.page_count
@@ -49,7 +81,7 @@ export class Rabbit {
                     break;
                 }
 
-            } while(items.length !== total_items)
+            } while (items.length !== total_items)
 
             return items;
 
@@ -98,7 +130,7 @@ export class Rabbit {
 
     /**
      * Подтверждение ответа
-     * @param message - сообщение
+     * @param {amqp.Message} message - сообщение
      */
     public ackMessage(message: amqp.Message): void {
         this.consumeChannel.ack(message);
@@ -163,7 +195,7 @@ export class Rabbit {
 
     /**
      * Создание очереди
-     * @param queueName  - название очереди
+     * @param {string} queueName  - название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
     public async assertQueue(queueName: string, options: amqp.Options.AssertQueue = { durable: true }): Promise<amqp.Replies.AssertQueue> {
@@ -179,7 +211,7 @@ export class Rabbit {
     /**
      * Удаление очереди
      * @param {string} queueName  - Название очереди
-     * @param {amqp.Options.DeleteQueue} options  - Конфигурация удаления очереди
+     * @param {amqp.Options.DeleteQueue} options  - Конфигурация удаления очереди, default = { ifUnused: false, ifEmpty: false }
      */
     public async deleteQueue(queueName: string, options: amqp.Options.DeleteQueue = { ifUnused: false, ifEmpty: false }): Promise<amqp.Replies.DeleteQueue> {
         try {
@@ -195,26 +227,26 @@ export class Rabbit {
      * Отправка сообщения в очередь
      * @param {string} queueName - название очереди
      * @param {string} message - сообщение
-     * @param {amqp.Options.Publish} message - Конфигурация отправки очереди
+     * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
     public publishMessage(queueName: string, message: string, options: amqp.Options.Publish = { persistent: true }): void {
         this.publishChannel.sendToQueue(queueName, Buffer.from(message), options);
     }
 
-        /**
-     * Прослушивание очереди на предмет новых сообщений
+    /**
+     * Создание потребяителя для очереди
      * @param {string} queueName - Название очереди
      * @param {Function} callback - Коллбэк для обработки нового сообщения
      * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
     public consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume = { noAck: false }): void {
-        this.consumeChannel.consume(queueName, (message) => callback(message), options)
+        this.consumeChannel.consume(queueName, callback, options)
     }
 
     /**
      * Получение очередного сообщения из очереди
      * @param {string} queueName  - Название очереди
-     * @param {amqp.Options.Get} options - Конфигурация get очереди
+     * @param {amqp.Options.Get} options - Конфигурация get очереди, default = { noAck: false }
      */
     public async getNextMessage(queueName: string, options: amqp.Options.Get = { noAck: false }): Promise<false | amqp.GetMessage> {
         try {
@@ -228,7 +260,7 @@ export class Rabbit {
 
     /**
      * отменяет прослушивание по тэгу
-     * @param {string} consumerTag тэг прослушивателя
+     * @param {string} consumerTag - тэг прослушивателя
      */
     public async cancelConsuming(consumerTag: string): Promise<amqp.Replies.Empty> {
         try {

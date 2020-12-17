@@ -1,2 +1,2 @@
-export { default as messageConsumer } from './message.consumer';
-export { default as messageFilterConsumer } from './message-filter.consumer';
+export { MessageQueueConsumer } from './message.consumer';
+export { MessageFilterQueueConsumer } from './message-filter.consumer';

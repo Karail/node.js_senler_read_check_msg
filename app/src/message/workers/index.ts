@@ -1,0 +1,1 @@
+export { MessageWorker } from './message.worker';
