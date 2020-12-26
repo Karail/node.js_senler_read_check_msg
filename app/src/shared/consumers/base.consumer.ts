@@ -1,24 +1,34 @@
 import * as amqp from 'amqplib';
 // Rabbit
-import { Rabbit } from "../../shared/rabbit";
+import { Rabbit } from "../rabbit";
+// Logger
+import { Logger } from '../services';
 
-export class MessageQueueConsumer {
+export class BaseQueueConsumer {
 
     /**
-     * Ссылка на инстанс Rabbit.js
+     * Ссылка на инстанс Rabbitmq
      */
     private rabbitProvider!: Rabbit
+    /**
+     * Префикс для именования очередей
+     */
+    private keyPrefix!: string;
 
     setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
+    }
+
+    setKeyPrefix(keyPrefix: string) {
+        this.keyPrefix = keyPrefix;
     }
 
     /**
      * Инициализирующий метод модуля
      */
     async start(): Promise<void> {
-        await this.rabbitProvider.createConsumeChannel();
-        console.log('MESSAGE: 2.Create rabbit consume channel');
+        await this.rabbitProvider.createChannel(this.keyPrefix);
+        Logger.info('3.Create rabbit consume channel');
     }
 
     /**
@@ -33,17 +43,19 @@ export class MessageQueueConsumer {
 
     /**
      * отменяет прослушивание по тэгу
+     * @param {string} queueName  - Название очереди
      * @param {string} consumerTag тэг прослушивателя
      */
-    cancelConsuming(consumerTag: string): void {
-        this.rabbitProvider.cancelConsuming(consumerTag);
+    cancelConsuming(queueName = '', consumerTag: string): void {
+        this.rabbitProvider.cancelConsuming(queueName, consumerTag);
     }
 
     /**
      * Подтвердить обработку сообщения
+     * @param {string} queueName  - Название очереди
      * @param {amqp.Message} message
      */
-    ackMessage(message: amqp.Message): void {
-        this.rabbitProvider.ackMessage(message);
+    ackMessage(queueName = '', message: amqp.Message): void {
+        this.rabbitProvider.ackMessage(queueName, message);
     }
 }

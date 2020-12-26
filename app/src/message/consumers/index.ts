@@ -1,2 +1,3 @@
-export { MessageQueueConsumer } from './message.consumer';
-export { MessageFilterQueueConsumer } from './message-filter.consumer';
+export { MessageExchangerQueueConsumer } from './message-exchanger.consumer';
+export { MessageCheckQueueConsumer } from './message-check.consumer';
+export { MessageThrowQueueConsumer } from './message-throw.consumer';

@@ -1,9 +1,8 @@
-class LogService {
-    info(...args: string[]) {
-        console.log(new Date().toLocaleString() + ' | ', ...args);
+export class Logger {
+    static info(...args: string[]) {
+        console.log(new Date().toLocaleString() + ' |', ...args);
     }
-    error(...args: string[]) {
-        console.error(new Date().toLocaleString() + ' | ', ...args);
+    static error(...args: string[]) {
+        console.error(new Date().toLocaleString() + ' |', ...args);
     }
 }
-export default new LogService();

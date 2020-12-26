@@ -1,9 +1,11 @@
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 dotenv.config();
 
-import * as express from 'express';
+import express from 'express';
 // Services
 import { AppService } from './app.service';
+// Logger
+import { Logger } from './shared/services';
 
 const app = express();
 
@@ -15,5 +17,5 @@ app.listen(port, async () => {
     
     await appService.init();
 
-    console.log(`microservice started ${port}`);
+    Logger.info(`microservice started ${port}`);
 });

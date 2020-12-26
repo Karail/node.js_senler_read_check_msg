@@ -1,0 +1,1 @@
+export { BaseQueueConsumer } from './base.consumer';

@@ -1,22 +1,35 @@
 import * as amqp from 'amqplib';
 // Rabbit
 import { Rabbit } from "../../shared/rabbit";
+// Logger
+import { Logger } from '../services';
 
-export class MessageFilterQueueProducer {
+export class BaseQueueProducer {
 
+    /**
+     * Ссылка на инстанс Rabbitmq
+     */
     private rabbitProvider!: Rabbit;
     private consumer!: any;
+        /**
+     * Префикс для именования очередей
+     */
+    private keyPrefix!: string;
 
     public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
+    }
+
+    setKeyPrefix(keyPrefix: string) {
+        this.keyPrefix = keyPrefix;
     }
 
     /**
      * Инициализирующий метод модуля
      */
     public async start(): Promise<void> {
-        await this.rabbitProvider.createChannel();
-        console.log('MESSAGE-FILTER: 3.Create rabbit producer channel');
+        await this.rabbitProvider.createChannel(this.keyPrefix);
+        Logger.info('2.Create rabbit producer channel');
     }
 
     /**
@@ -25,16 +38,10 @@ export class MessageFilterQueueProducer {
      * - Количество получателей (consumer)
      * @param {string} queueName - название очереди
      */
-    public async assertQueue(queueName: string): Promise<amqp.Replies.AssertQueue> {
-        try {
-            const ok = await this.rabbitProvider.assertQueue(queueName, {
-                durable: false, maxPriority: 10
-            });
-            return ok;
-        } catch (e) {
-            console.log(e);
-            throw e;
-        }
+    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue)
+    // : Promise<amqp.Replies.AssertQueue | undefined> 
+    {
+        return this.rabbitProvider.assertQueue(queueName, options);
     }
 
     /**
@@ -43,7 +50,7 @@ export class MessageFilterQueueProducer {
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
-    public publishMessage(queueName: string, message: any, options?: amqp.Options.Publish): void {
+    public publishMessage(queueName = '', message: any, options?: amqp.Options.Publish): void {
         this.rabbitProvider.publishMessage(queueName, JSON.stringify(message), options);
     }
 }

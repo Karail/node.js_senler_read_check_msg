@@ -1,7 +1,11 @@
 // Reslovers
-import { MessageQueueResolver } from './message/resolvers/message.resolver';
+import { MessageExchangerQueueResolver } from './message/resolvers';
 // Workers
-import { MessageWorker } from './message/workers/message.worker';
+import { MessageExchangerWorker } from './message/workers';
+// Rabbitmq
+import { Rabbit } from './shared/rabbit';
+// Logger
+import { Logger } from './shared/services';
 
 export class AppService {
     /**
@@ -9,12 +13,24 @@ export class AppService {
      */
     public async init() {
 
-        const worker = new MessageWorker();
-        const resolver = new MessageQueueResolver();
+        const rabbitWorker = new Rabbit();
 
+        await rabbitWorker.createConnection();
+
+        Logger.info('1.Create rabbit connection')
+
+        const worker = new MessageExchangerWorker();
+
+        worker.setRabbitProvider(rabbitWorker);
+
+        const resolver = new MessageExchangerQueueResolver();
+
+        resolver.setRabbitProvider(rabbitWorker);
         resolver.setServerId(0);
         resolver.setMessageWorker(worker);
         await resolver.start();
-        resolver.publishMessage('asdad');
+        resolver.publishMessage({
+            group_id: 1
+        });
     }
 }

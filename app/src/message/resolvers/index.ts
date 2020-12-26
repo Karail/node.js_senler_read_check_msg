@@ -1,2 +1,3 @@
-export { MessageFilterQueueResolver } from './message-filter.resolver';
-export { MessageQueueResolver } from './message.resolver';
+export { MessageCheckQueueResolver } from './message-check.resolver';
+export { MessageExchangerQueueResolver } from './message-exchanger.resolver';
+export { MessageThrowQueueResolver } from './message-throw.resolver';

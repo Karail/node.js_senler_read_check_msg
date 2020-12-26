@@ -1,0 +1,1 @@
+export { BaseQueueProducer } from './base.producer';

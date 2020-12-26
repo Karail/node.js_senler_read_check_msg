@@ -1,0 +1,1 @@
+export { BaseQueueResolver } from './base.resolver';

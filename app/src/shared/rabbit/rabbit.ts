@@ -1,5 +1,8 @@
 import * as amqp from 'amqplib';
+import fetch from 'node-fetch';
 import * as request from 'request-promise';
+// Logger
+import { Logger } from '../services';
 
 export class Rabbit {
 
@@ -7,14 +10,10 @@ export class Rabbit {
      * Хранит соединение с RabbitMQ
      */
     public amqpConnection!: amqp.Connection;
-    /**
-     * Хранит один канал для producer
-     */
-    public publishChannel!: amqp.ConfirmChannel;
-    /**
-     * Хранит один канал в режиме подтверждения
-     */
-    public consumeChannel!: amqp.ConfirmChannel;
+
+    public channels: Map<string, amqp.Channel> = new Map();
+
+
 
     constructor(
         private readonly connectionLinkOptions?: any
@@ -24,27 +23,28 @@ export class Rabbit {
      * Создание ссылки подключения к брокеру
      */
     public getConnectionLink(): string {
-        return process.env.RABBITMQ_URL || '';
+        return process.env.AMQP_URL || '';
     }
 
     /**
      * Создание ссылки api для get очередей
      */
     public getQueuesApiUrl(): string {
-        return ``;
+        return process.env.RABBITMQ_URL || '';
     }
 
     /**
      * Создание очереди
-     * @param {string} queueName  - название очереди
+     * @param {string} queueName - название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async checkQueue(queueName: string): Promise<amqp.Replies.AssertQueue> {
+    public async checkQueue(queueName = ''): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
-            const ok = await this.publishChannel.checkQueue(queueName);
+            const channel = this.channels?.get(queueName);
+            const ok = await channel?.checkQueue(queueName);
             return ok;
         } catch (e) {
-            console.log(e);
+            Logger.info(e);
             throw e;
         }
     }
@@ -55,38 +55,16 @@ export class Rabbit {
     public async getQueuesList(name: string): Promise<any[]> {
 
         try {
+            const url = `${this.getQueuesApiUrl()}/api/queues/`;
 
-            let items: any[] = [];
-            let total_items = 0;
-            let page = 1;
-            let page_count = 1;
+            let response = await request.get({ url });
 
-            do {
+            response = JSON.parse(response);
 
-                const request_api_url = `${this.getQueuesApiUrl()}?page=${page}&page_size=100&name=${name}&use_regex=true&pagination=true`;
-                let response = await request.get({
-                    url: request_api_url
-                });
-
-                response = JSON.parse(response);
-
-                if (response?.items) {
-
-                    items = [...items, ...response.items]
-                    page_count = response.page_count
-                    total_items = response.filtered_count
-                    page++
-
-                } else {
-                    break;
-                }
-
-            } while (items.length !== total_items)
-
-            return items;
+            return response;
 
         } catch (e) {
-            console.error("[AMQP] getQueuesList error", e.message);
+            Logger.error("[AMQP] getQueuesList error", e.message);
             throw e;
         }
     }
@@ -101,26 +79,26 @@ export class Rabbit {
 
             const connection = await amqp.connect(connectionLink);
 
-            connection.on('error', (err) => {
+            connection?.on('error', (err) => {
                 if (err.message !== 'Connection closing') {
-                    console.error('[AMQP] conn error', err.message);
+                    Logger.error('[AMQP] conn error', err.message);
                 }
             });
 
-            connection.on('close', () => {
-                console.error('[AMQP] reconnecting');
+            connection?.on('close', () => {
+                Logger.error('[AMQP] reconnecting');
                 setTimeout(() => {
                     this.createConnection();
                 }, 1000);
                 return;
             });
 
-            console.log('[AMQP] connected');
+            Logger.info('[AMQP] connected');
 
             this.amqpConnection = connection;
 
         } catch (e) {
-            console.error('[AMQP] createConnection error', e.message);
+            Logger.error('[AMQP] createConnection error', e.message);
             setTimeout(() => {
                 this.createConnection();
             }, 1000);
@@ -130,41 +108,45 @@ export class Rabbit {
 
     /**
      * Подтверждение ответа
+     * @param queueName - название очереди
      * @param {amqp.Message} message - сообщение
      */
-    public ackMessage(message: amqp.Message): void {
-        this.consumeChannel.ack(message);
+    public ackMessage(queueName = '', message: amqp.Message): void {
+        const channel = this.channels?.get(queueName);
+        channel?.ack(message);
     }
 
     /**
      * Создание канала
+     * @param queueName - название очереди
      */
-    public async createChannel(): Promise<boolean> {
+    public async createChannel(queueName = ''): Promise<boolean> {
         try {
-            const channel = await this.amqpConnection?.createConfirmChannel();
+            const channel = await this.amqpConnection?.createChannel();
 
-            channel.on('error', (err) => {
-                console.error('[AMQP] channel error', err.message);
+            channel?.on('error', (err) => {
+                Logger.error('[AMQP] channel error', err.message);
             });
 
-            channel.on('close', () => {
-                console.log('[AMQP] channel closed');
+            channel?.on('close', () => {
+                Logger.info('[AMQP] channel closed');
             });
 
-            this.publishChannel = channel;
+            this.channels?.set(queueName, channel);
 
             return true;
         } catch (e) {
-            console.error("[AMQP] createChannel error", e.message);
+            Logger.error("[AMQP] createChannel error", e.message);
             throw e;
         }
     }
 
     /**
      * Открывает канал в режиме подтверждения
+     * @param queueName - название очереди
      * @param {any} config 
      */
-    public async createConsumeChannel(config: any = {}): Promise<boolean> {
+    public async createConfirmChannel(queueName = '', config: any = {}): Promise<boolean> {
         try {
             const defaultConfig = {
                 prefetch: 1000
@@ -176,19 +158,19 @@ export class Rabbit {
 
             channel.prefetch(prefetch)
 
-            channel.on("error", (err) => {
-                console.error("[AMQP] channel error", err.message);
+            channel?.on("error", (err) => {
+                Logger.error("[AMQP] channel error", err.message);
             });
 
-            channel.on("close", () => {
-                console.log("[AMQP] channel closed");
+            channel?.on("close", () => {
+                Logger.info("[AMQP] channel closed");
             });
 
-            this.consumeChannel = channel;
+            this.channels?.set(queueName, channel);
 
             return true;
         } catch (e) {
-            console.error("[AMQP] createConsumeChannel error", e.message);
+            Logger.error("[AMQP] createConsumeChannel error", e.message);
             throw e;
         }
     }
@@ -198,12 +180,17 @@ export class Rabbit {
      * @param {string} queueName  - название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async assertQueue(queueName: string, options: amqp.Options.AssertQueue = { durable: true }): Promise<amqp.Replies.AssertQueue> {
+    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue)
+    // : Promise<amqp.Replies.AssertQueue | undefined> 
+    {
         try {
-            const ok = await this.publishChannel.assertQueue(queueName, options);
+            
+            const channel = this.channels?.get(queueName);
+
+            const ok = await channel?.assertQueue(queueName, options);
             return ok;
         } catch (e) {
-            console.error(`AMQP - assertQueue error - ${queueName}`, e.message);
+            Logger.error(`AMQP - assertQueue error - ${queueName}`, e.message);
             throw e;
         }
     }
@@ -213,12 +200,15 @@ export class Rabbit {
      * @param {string} queueName  - Название очереди
      * @param {amqp.Options.DeleteQueue} options  - Конфигурация удаления очереди, default = { ifUnused: false, ifEmpty: false }
      */
-    public async deleteQueue(queueName: string, options: amqp.Options.DeleteQueue = { ifUnused: false, ifEmpty: false }): Promise<amqp.Replies.DeleteQueue> {
+    public async deleteQueue(queueName = '', options: amqp.Options.DeleteQueue = { ifUnused: false, ifEmpty: false }): Promise<amqp.Replies.DeleteQueue | undefined> {
         try {
-            const ok = await this.publishChannel.deleteQueue(queueName, options);
+
+            const channel = this.channels?.get(queueName);
+
+            const ok = channel?.deleteQueue(queueName, options);
             return ok;
         } catch (e) {
-            console.error(`AMQP - deleteQueue error - ${queueName}`, e.message);
+            Logger.error(`AMQP - deleteQueue error - ${queueName}`, e.message);
             throw e;
         }
     }
@@ -229,8 +219,10 @@ export class Rabbit {
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
-    public publishMessage(queueName: string, message: string, options: amqp.Options.Publish = { persistent: true }): void {
-        this.publishChannel.sendToQueue(queueName, Buffer.from(message), options);
+    public publishMessage(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
+        const channel = this.channels?.get(queueName);
+
+        channel?.sendToQueue(queueName, Buffer.from(message), options);
     }
 
     /**
@@ -239,8 +231,9 @@ export class Rabbit {
      * @param {Function} callback - Коллбэк для обработки нового сообщения
      * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
-    public consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume = { noAck: false }): void {
-        this.consumeChannel.consume(queueName, callback, options)
+    public consume(queueName = '', callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume = { noAck: false }): void {
+        const channel = this.channels?.get(queueName);
+        channel?.consume(queueName, callback, options)
     }
 
     /**
@@ -248,28 +241,30 @@ export class Rabbit {
      * @param {string} queueName  - Название очереди
      * @param {amqp.Options.Get} options - Конфигурация get очереди, default = { noAck: false }
      */
-    public async getNextMessage(queueName: string, options: amqp.Options.Get = { noAck: false }): Promise<false | amqp.GetMessage> {
+    public async getNextMessage(queueName = '', options: amqp.Options.Get = { noAck: false }): Promise<false | amqp.GetMessage | undefined> {
         try {
-            const message = await this.consumeChannel.get(queueName, options);
+            const channel = this.channels?.get(queueName);
+            const message = await channel?.get(queueName, options);
             return message;
         } catch (e) {
-            console.error(`AMQP - getNextMessage error - ${queueName}`, e.message);
+            Logger.error(`AMQP - getNextMessage error - ${queueName}`, e.message);
             throw e;
         }
     }
 
     /**
      * отменяет прослушивание по тэгу
+     * @param {string} queueName  - Название очереди
      * @param {string} consumerTag - тэг прослушивателя
      */
-    public async cancelConsuming(consumerTag: string): Promise<amqp.Replies.Empty> {
+    public async cancelConsuming(queueName = '', consumerTag: string): Promise<amqp.Replies.Empty | undefined> {
         try {
-            const ok = await this.consumeChannel.cancel(consumerTag);
+            const channel = this.channels?.get(queueName);
+            const ok = await channel?.cancel(consumerTag);
             return ok;
         } catch (e) {
-            console.error(`AMQP - cancelConsuming error - ${consumerTag}`, e.message);
+            Logger.error(`AMQP - cancelConsuming error - ${consumerTag}`, e.message);
             throw e;
         }
     }
-
 }

@@ -1,54 +1,48 @@
 import * as amqp from 'amqplib';
 // Rabbit
 import { Rabbit } from "../../shared/rabbit";
-// Consumers
-import { MessageQueueConsumer } from "../consumers";
-// Producers
-import { MessageQueueProducer } from "../porducers";
+import { BaseQueueConsumer } from '../consumers';
+import { BaseQueueProducer } from '../producers/base.producer';
+// Logger
+import { Logger } from '../services';
 // Workers
-import { MessageWorker } from "../workers";
-// Resolvers
-import { MessageFilterQueueResolver } from "./message-filter.resolver";
+import { BaseQueueWorker } from '../workers/base.worker';
 
 /**
  * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
  * - Разрешение логики добавления запроса для вебхука в очередь
  * - Разрешение логики обработки запроса для вебхука из очереди
  */
-export class MessageQueueResolver {
-    /**
-     * Ссылка на инстанс Worker
-     */
-    private messageWorker!: MessageWorker;
-    /**
-     * Префикс для именования очередей
-     */
-    private keyPrefix = 'message-check';
+export class BaseQueueResolver {
+
     /**
      * ID сервера, на котором запущен процесс
      */
     private server_id = 0;
     /**
-     * Ссылка на инстанс Producer
-     */
-    private producer = new MessageQueueProducer();
-    /**
-     * Ссылка на инстанс Consumer
-     */
-    private consumer = new MessageQueueConsumer();
-    /**
      * экземпляр брокера
      */
-    private rabbitWorker = new Rabbit();
+    private rabbitWorker!: Rabbit;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
     private expiredLimit = 3600000;
+    /**
+     * Ссылка на инстанс Worker
+     */
+    public messageWorker?: BaseQueueWorker;
 
-    constructor() {
-        this.producer.setRabbitProvider(this.rabbitWorker);
-        this.consumer.setRabbitProvider(this.rabbitWorker);
-    }
+    /**
+     * 
+     * @param producer - Ссылка на инстанс Producer
+     * @param consumer - Ссылка на инстанс Consumer
+     * @param keyPrefix - Префикс для именования очередей
+     */
+    constructor(
+        public readonly producer: BaseQueueProducer,
+        public readonly consumer: BaseQueueConsumer,
+        public readonly keyPrefix: string,
+    ) { }
 
     /**
      * Обработку и добавление очередей начнем только после соединения с базой данных
@@ -59,11 +53,14 @@ export class MessageQueueResolver {
      */
     public async start(): Promise<void> {
         try {
-            await this.rabbitWorker.createConnection();
-
-            console.log('MESSAGE: 1.Create rabbit connection');
 
             const queueName = this.getQueueName();
+
+            this.producer.setKeyPrefix(queueName);
+            this.consumer.setKeyPrefix(queueName);
+
+            this.producer.setRabbitProvider(this.rabbitWorker);
+            this.consumer.setRabbitProvider(this.rabbitWorker);
 
             await this.producer.start();
             await this.producer.assertQueue(queueName);
@@ -76,10 +73,21 @@ export class MessageQueueResolver {
         }
     }
 
+    public setRabbitProvider(rabbitWorker: Rabbit) {
+        this.rabbitWorker = rabbitWorker;
+    }
+    /**
+     * setter id сервера
+     * @param id - id сервера
+     */
     public setServerId(id: number): void {
         this.server_id = id;
     }
 
+    /**
+     * setter воркера
+     * @param worker - воркер
+     */
     public setMessageWorker(worker: any): void {
         this.messageWorker = worker;
     }
@@ -88,52 +96,17 @@ export class MessageQueueResolver {
      * Добавляет потребителя для сообщений очереди routing_key
      * @param {string} queueName - название очереди
      */
-    public addConsumer(queueName: string): void {
+    public addConsumer(queueName = ''): void {
 
-        this.consumer.consume(queueName, async (message) => {
-            if (message) {
-
-                console.log(await this.checkQueue(this.getQueueName()));
-
-                const content = JSON.parse(message.content.toString());
-
-                const resolver = new MessageFilterQueueResolver();
-                resolver.setServerId(0);
-                resolver.setMessageWorker(this.messageWorker);
-                await resolver.start();
-                // let item = {};
-
-                // if (this.messageWorker.goups[message.group_id] === false) {
-                //     // создаём очередь my_qeueu_ + group_id
-
-
-
-                //     this.messageWorker.goups[message.group_id] = item;
-
-                // } else {
-                //     item = this.messageWorker.goups[message.group_id];
-                // }
-                // //пушим в нее mwssage
-
-                // item.filter.add(message);
-            }
-
-        }, { noAck: false });
     }
 
     /**
      * Создание очереди
-     * @param {string} queueName  - название очереди
+     * @param {string} queueName - название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async checkQueue(queueName: string): Promise<amqp .Replies.AssertQueue> {
-        try {
-            const ok = await this.rabbitWorker.checkQueue(queueName);
-            return ok;
-        } catch (e) {
-            console.log(e);
-            throw e;
-        }
+    public async checkQueue(queueName = ''): Promise<amqp .Replies.AssertQueue | undefined> {
+        return this.rabbitWorker.checkQueue(queueName);
     }
 
     /**
@@ -143,11 +116,22 @@ export class MessageQueueResolver {
         return `${this.keyPrefix}`;
     }
 
-    public publishMessage(payload: any): void {
-        const queueName = this.getQueueName();
-        this.producer.publishMessage(queueName, { type: 'webhook_prepare', payload });
+    public getRabbitProvider(): Rabbit {
+        return this.rabbitWorker;
     }
 
+    /**
+     * Отправка сообщения в очередь
+     * @param {any} payload сообщение
+     */
+    public publishMessage(payload: any, options?: amqp.Options.Publish): void {
+        const queueName = this.getQueueName();
+        this.producer.publishMessage(queueName, { payload }, options);
+    }
+
+    /**
+     * даляет очередь
+     */
     public async deleteQueue(): Promise<void> {
         try {
             await this.rabbitWorker.deleteQueue(this.getQueueName(), { ifEmpty: true });
@@ -157,4 +141,8 @@ export class MessageQueueResolver {
             throw e;
         }
     }
-}
+
+    public async getQueuesList() {
+        return this.rabbitWorker.getQueuesList(this.keyPrefix);
+    }
+} 
