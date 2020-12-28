@@ -1,4 +1,5 @@
 // Reslovers
+import { MessageExchange } from './message/exchangers/message.exchanger';
 import { MessageExchangerQueueResolver } from './message/resolvers';
 // Workers
 import { MessageExchangerWorker } from './message/workers';
@@ -6,6 +7,7 @@ import { MessageExchangerWorker } from './message/workers';
 import { Rabbit } from './shared/rabbit';
 // Logger
 import { Logger } from './shared/services';
+import { QueueService } from './shared/services/queue.service';
 
 export class AppService {
     /**
@@ -13,24 +15,27 @@ export class AppService {
      */
     public async init() {
 
-        const rabbitWorker = new Rabbit();
+        const rabbitProvider = new Rabbit();
 
-        await rabbitWorker.createConnection();
+        await rabbitProvider.createConnection();
 
-        Logger.info('1.Create rabbit connection')
+        Logger.info('Create rabbit connection');
 
-        const worker = new MessageExchangerWorker();
+        const queueService = new QueueService();
 
-        worker.setRabbitProvider(rabbitWorker);
 
-        const resolver = new MessageExchangerQueueResolver();
+        const resolver = await queueService.createQueue(
+            rabbitProvider,
+            new MessageExchangerWorker(),
+            new MessageExchangerQueueResolver(),
+            0
+        );
 
-        resolver.setRabbitProvider(rabbitWorker);
-        resolver.setServerId(0);
-        resolver.setMessageWorker(worker);
-        await resolver.start();
-        resolver.publishMessage({
-            group_id: 1
-        });
+        const exchange =  new MessageExchange('message-exchange');
+
+        exchange.setRabbitProvider(rabbitProvider);
+        await exchange.start();
+        await exchange.assertExchange();
+
     }
 }

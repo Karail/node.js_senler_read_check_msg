@@ -17,7 +17,13 @@ services:
       - "3003:3000"
 
   rabbitmq:
-    image: rabbitmq:3.7.4
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+    image: rabbitmq:latest
+    build:
+      context: ./docker/rabbitmq
+    volumes:
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+       - 5672:5672
+       - 15672:15672

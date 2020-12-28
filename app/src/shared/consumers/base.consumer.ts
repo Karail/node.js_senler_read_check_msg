@@ -7,7 +7,7 @@ import { Logger } from '../services';
 export class BaseQueueConsumer {
 
     /**
-     * Ссылка на инстанс Rabbitmq
+     * Инстанс Rabbitmq
      */
     private rabbitProvider!: Rabbit
     /**
@@ -15,20 +15,28 @@ export class BaseQueueConsumer {
      */
     private keyPrefix!: string;
 
-    setRabbitProvider(rabbitProvider: Rabbit): void {
+    /**
+     * setter брокера
+     * @param {Rabbit} rabbitProvider - Инстанс брокера
+     */
+    public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
 
-    setKeyPrefix(keyPrefix: string) {
+    /**
+     * setter префиксa для именования очередей
+     * @param {string} keyPrefix - Префикс для именования очередей
+     */
+    public setKeyPrefix(keyPrefix: string) {
         this.keyPrefix = keyPrefix;
     }
 
     /**
      * Инициализирующий метод модуля
      */
-    async start(): Promise<void> {
+    public async start(): Promise<void> {
         await this.rabbitProvider.createChannel(this.keyPrefix);
-        Logger.info('3.Create rabbit consume channel');
+        Logger.info(`[${this.keyPrefix}] 2.Create rabbit consume channel`);
     }
 
     /**
@@ -37,7 +45,7 @@ export class BaseQueueConsumer {
      * @param {Function} callback - Коллбэк для обработки нового сообщения
      * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
-    consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume): void {
+    public consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume): void {
         this.rabbitProvider.consume(queueName, callback, options);
     }
 
@@ -46,7 +54,7 @@ export class BaseQueueConsumer {
      * @param {string} queueName  - Название очереди
      * @param {string} consumerTag тэг прослушивателя
      */
-    cancelConsuming(queueName = '', consumerTag: string): void {
+    public cancelConsuming(queueName = '', consumerTag: string): void {
         this.rabbitProvider.cancelConsuming(queueName, consumerTag);
     }
 
@@ -55,7 +63,7 @@ export class BaseQueueConsumer {
      * @param {string} queueName  - Название очереди
      * @param {amqp.Message} message
      */
-    ackMessage(queueName = '', message: amqp.Message): void {
+    public ackMessage(queueName = '', message: amqp.Message): void {
         this.rabbitProvider.ackMessage(queueName, message);
     }
 }

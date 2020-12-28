@@ -1,1 +1,0 @@
-export { GroupQueueConsumer } from './group.consumer';

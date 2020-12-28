@@ -1,26 +1,39 @@
 import * as amqp from 'amqplib';
 // Rabbit
 import { Rabbit } from "../../shared/rabbit";
+// Consumer
+import { BaseQueueConsumer } from '../consumers';
 // Logger
 import { Logger } from '../services';
 
 export class BaseQueueProducer {
 
     /**
-     * Ссылка на инстанс Rabbitmq
+     * Инстанс брокера
      */
     private rabbitProvider!: Rabbit;
-    private consumer!: any;
-        /**
+    /**
+     * Инстанс Consumer
+     */
+    private consumer!: BaseQueueConsumer;
+    /**
      * Префикс для именования очередей
      */
     private keyPrefix!: string;
 
-    public setRabbitProvider(rabbitProvider: Rabbit): void {
+    /**
+     * Setter rabbitProvider
+     * @param {Rabbit} rabbitProvider - Инстанс брокера
+     */
+    public setRabbitProvider(rabbitProvider: Rabbit) {
         this.rabbitProvider = rabbitProvider;
     }
 
-    setKeyPrefix(keyPrefix: string) {
+    /**
+     * Setter keyPrefix
+     * @param {string} keyPrefix - Префикс для именования очередей
+     */
+    public setKeyPrefix(keyPrefix: string) {
         this.keyPrefix = keyPrefix;
     }
 
@@ -29,24 +42,22 @@ export class BaseQueueProducer {
      */
     public async start(): Promise<void> {
         await this.rabbitProvider.createChannel(this.keyPrefix);
-        Logger.info('2.Create rabbit producer channel');
+        Logger.info(`[${this.keyPrefix}] 1.Create rabbit producer channel`);
     }
 
     /**
      * Создание очереди, если ее не существует и получение дополнительных параметров по очереди
      * - Количество сообщений
      * - Количество получателей (consumer)
-     * @param {string} queueName - название очереди
+     * @param {string} queueName - Название очереди
      */
-    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue)
-    // : Promise<amqp.Replies.AssertQueue | undefined> 
-    {
+    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
         return this.rabbitProvider.assertQueue(queueName, options);
     }
 
     /**
      * Отправка сообщения в очередь
-     * @param {string} queueName - название очереди
+     * @param {string} queueName - Название очереди
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */

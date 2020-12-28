@@ -1,10 +1,14 @@
 import * as amqp from 'amqplib';
 // Rabbit
 import { Rabbit } from "../../shared/rabbit";
+// Consumers
 import { BaseQueueConsumer } from '../consumers';
-import { BaseQueueProducer } from '../producers/base.producer';
+// Producers
+import { BaseQueueProducer } from '../producers';
 // Logger
 import { Logger } from '../services';
+// Serivces
+import { QueueService } from '../services/queue.service';
 // Workers
 import { BaseQueueWorker } from '../workers/base.worker';
 
@@ -20,22 +24,26 @@ export class BaseQueueResolver {
      */
     private server_id = 0;
     /**
-     * экземпляр брокера
+     * Инстанс брокера
      */
-    private rabbitWorker!: Rabbit;
+    private rabbitProvider!: Rabbit;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
     private expiredLimit = 3600000;
     /**
-     * Ссылка на инстанс Worker
+     * Инстанс Worker
      */
-    public messageWorker?: BaseQueueWorker;
+    public worker?: BaseQueueWorker;
+    /**
+     * Сервис для работы с очередями
+     */
+    public queueService = new QueueService;
 
     /**
      * 
-     * @param producer - Ссылка на инстанс Producer
-     * @param consumer - Ссылка на инстанс Consumer
+     * @param producer - Инстанс Producer
+     * @param consumer - Инстанс Consumer
      * @param keyPrefix - Префикс для именования очередей
      */
     constructor(
@@ -59,8 +67,8 @@ export class BaseQueueResolver {
             this.producer.setKeyPrefix(queueName);
             this.consumer.setKeyPrefix(queueName);
 
-            this.producer.setRabbitProvider(this.rabbitWorker);
-            this.consumer.setRabbitProvider(this.rabbitWorker);
+            this.producer.setRabbitProvider(this.rabbitProvider);
+            this.consumer.setRabbitProvider(this.rabbitProvider);
 
             await this.producer.start();
             await this.producer.assertQueue(queueName);
@@ -68,33 +76,37 @@ export class BaseQueueResolver {
             await this.consumer.start();
             await this.addConsumer(queueName);
         } catch (e) {
-            console.log(e);
+            Logger.error(e);
             throw e;
         }
     }
 
-    public setRabbitProvider(rabbitWorker: Rabbit) {
-        this.rabbitWorker = rabbitWorker;
+    /**
+     * Setter rabbitProvider
+     * @param {Rabbit} rabbitProvider - Инстанс брокера
+     */
+    public setRabbitProvider(rabbitProvider: Rabbit) {
+        this.rabbitProvider = rabbitProvider;
     }
     /**
-     * setter id сервера
-     * @param id - id сервера
+     * Setter server_id
+     * @param {number} id - server_id
      */
     public setServerId(id: number): void {
         this.server_id = id;
     }
 
     /**
-     * setter воркера
-     * @param worker - воркер
+     * Setter worker
+     * @param {BaseQueueWorker} worker - Инстанс Worker
      */
-    public setMessageWorker(worker: any): void {
-        this.messageWorker = worker;
+    public setMessageWorker(worker: BaseQueueWorker): void {
+        this.worker = worker;
     }
 
     /**
      * Добавляет потребителя для сообщений очереди routing_key
-     * @param {string} queueName - название очереди
+     * @param {string} queueName - Название очереди
      */
     public addConsumer(queueName = ''): void {
 
@@ -102,11 +114,10 @@ export class BaseQueueResolver {
 
     /**
      * Создание очереди
-     * @param {string} queueName - название очереди
-     * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
+     * @param {string} queueName - Название очереди
      */
     public async checkQueue(queueName = ''): Promise<amqp .Replies.AssertQueue | undefined> {
-        return this.rabbitWorker.checkQueue(queueName);
+        return this.rabbitProvider.checkQueue(queueName);
     }
 
     /**
@@ -116,13 +127,17 @@ export class BaseQueueResolver {
         return `${this.keyPrefix}`;
     }
 
+    /**
+     * Getter rabbitProvider
+     */
     public getRabbitProvider(): Rabbit {
-        return this.rabbitWorker;
+        return this.rabbitProvider;
     }
 
     /**
      * Отправка сообщения в очередь
-     * @param {any} payload сообщение
+     * @param {any} payload - Cообщение
+     * @param {amqp.Options.Publish} options - Конфигурация отправки очереди 
      */
     public publishMessage(payload: any, options?: amqp.Options.Publish): void {
         const queueName = this.getQueueName();
@@ -130,11 +145,12 @@ export class BaseQueueResolver {
     }
 
     /**
-     * даляет очередь
+     * Удаляет очередь
+     * @param {amqp.Options.DeleteQueue} Конфигурация удаления очереди, default = { ifEmpty: false }
      */
-    public async deleteQueue(): Promise<void> {
+    public async deleteQueue(options: amqp.Options.DeleteQueue = { ifEmpty: true }): Promise<void> {
         try {
-            await this.rabbitWorker.deleteQueue(this.getQueueName(), { ifEmpty: true });
+            await this.rabbitProvider.deleteQueue(this.getQueueName(), options);
             console.log('deleteQueue PREPARE');
         } catch (e) {
             console.log(e);
@@ -142,7 +158,10 @@ export class BaseQueueResolver {
         }
     }
 
+    /**
+     * Возвращает список очередей по имени
+     */
     public async getQueuesList() {
-        return this.rabbitWorker.getQueuesList(this.keyPrefix);
+        return this.rabbitProvider.getQueuesList();
     }
 } 

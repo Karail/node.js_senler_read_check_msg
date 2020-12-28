@@ -1,0 +1,1 @@
+export { BaseQueueWorker } from './base.worker';

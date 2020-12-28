@@ -1,5 +1,4 @@
 import * as amqp from 'amqplib';
-import fetch from 'node-fetch';
 import * as request from 'request-promise';
 // Logger
 import { Logger } from '../services';
@@ -11,10 +10,15 @@ export class Rabbit {
      */
     public amqpConnection!: amqp.Connection;
 
+    /**
+     * Хранит писок каналов
+     */
     public channels: Map<string, amqp.Channel> = new Map();
 
-
-
+    /**
+     * 
+     * @param connectionLinkOptions - настройки подключения
+     */
     constructor(
         private readonly connectionLinkOptions?: any
     ) { }
@@ -35,7 +39,7 @@ export class Rabbit {
 
     /**
      * Создание очереди
-     * @param {string} queueName - название очереди
+     * @param {string} queueName - Название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
     public async checkQueue(queueName = ''): Promise<amqp.Replies.AssertQueue | undefined> {
@@ -48,12 +52,11 @@ export class Rabbit {
             throw e;
         }
     }
-    /**
-     * Возвращает список очередей по имени
-     * @param {string} name 
-     */
-    public async getQueuesList(name: string): Promise<any[]> {
 
+    /**
+     * Возвращает список очередей
+     */
+    public async getQueuesList(): Promise<any[]> {
         try {
             const url = `${this.getQueuesApiUrl()}/api/queues/`;
 
@@ -108,7 +111,7 @@ export class Rabbit {
 
     /**
      * Подтверждение ответа
-     * @param queueName - название очереди
+     * @param queueName - Название очереди
      * @param {amqp.Message} message - сообщение
      */
     public ackMessage(queueName = '', message: amqp.Message): void {
@@ -118,7 +121,7 @@ export class Rabbit {
 
     /**
      * Создание канала
-     * @param queueName - название очереди
+     * @param queueName - Название очереди
      */
     public async createChannel(queueName = ''): Promise<boolean> {
         try {
@@ -143,7 +146,7 @@ export class Rabbit {
 
     /**
      * Открывает канал в режиме подтверждения
-     * @param queueName - название очереди
+     * @param queueName - Название очереди
      * @param {any} config 
      */
     public async createConfirmChannel(queueName = '', config: any = {}): Promise<boolean> {
@@ -177,12 +180,10 @@ export class Rabbit {
 
     /**
      * Создание очереди
-     * @param {string} queueName  - название очереди
+     * @param {string} queueName  - Название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue)
-    // : Promise<amqp.Replies.AssertQueue | undefined> 
-    {
+    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
             
             const channel = this.channels?.get(queueName);
@@ -215,13 +216,12 @@ export class Rabbit {
 
     /**
      * Отправка сообщения в очередь
-     * @param {string} queueName - название очереди
+     * @param {string} queueName - Название очереди
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
     public publishMessage(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
         const channel = this.channels?.get(queueName);
-
         channel?.sendToQueue(queueName, Buffer.from(message), options);
     }
 
@@ -238,7 +238,7 @@ export class Rabbit {
 
     /**
      * Получение очередного сообщения из очереди
-     * @param {string} queueName  - Название очереди
+     * @param {string} queueName - Название очереди
      * @param {amqp.Options.Get} options - Конфигурация get очереди, default = { noAck: false }
      */
     public async getNextMessage(queueName = '', options: amqp.Options.Get = { noAck: false }): Promise<false | amqp.GetMessage | undefined> {
@@ -254,7 +254,7 @@ export class Rabbit {
 
     /**
      * отменяет прослушивание по тэгу
-     * @param {string} queueName  - Название очереди
+     * @param {string} queueName - Название очереди
      * @param {string} consumerTag - тэг прослушивателя
      */
     public async cancelConsuming(queueName = '', consumerTag: string): Promise<amqp.Replies.Empty | undefined> {
@@ -266,5 +266,58 @@ export class Rabbit {
             Logger.error(`AMQP - cancelConsuming error - ${consumerTag}`, e.message);
             throw e;
         }
+    }
+
+    /**
+     * Создать обменник
+     * @param exchangeName - Имя обменник
+     * @param type - Тип обменника
+     * @param options - Конфигурация обменника
+     */
+    public async assertExchange(exchangeName: string, type = '', options?: amqp.Options.AssertExchange) {
+        try {
+            const channel = this.channels?.get(exchangeName);
+
+            const res = await channel?.assertExchange(exchangeName, type, options);
+    
+            return res;
+        } catch (e) {
+            Logger.error(e);
+            throw e;
+        }
+    }
+
+    /**
+     * Привязать очередь к обменнеку
+     * @param exchangeName - Имя обменник
+     * @param queueName - Название очереди
+     * @param pattern - pattern
+     * @param args - Аргументы
+     */
+    public async bindQueue(exchangeName: string, queueName = '', pattern = '', args = []) {
+        try {
+            const channel = this.channels?.get(exchangeName);
+
+            const res = await channel?.bindQueue(queueName, exchangeName, pattern, args);
+    
+            return res;
+        } catch (e) {
+            Logger.error(e);
+            throw e;
+        }
+    }
+
+    /**
+     * Опубликовать сообщение в обменник
+     * @param exchangeName - Имя обменник
+     * @param message - Сообщение
+     * @param queueName - Название очереди
+     * @param options - Конфигурация сообщения
+     */
+    public publish(exchangeName: string, message: any, queueName = '', options: amqp.Options.Publish = {persistent: false}): boolean | undefined {
+
+        const channel = this.channels?.get(exchangeName);
+
+        return channel?.publish(exchangeName, queueName, Buffer.from(message), options);
     }
 }

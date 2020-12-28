@@ -4,12 +4,16 @@ import { Rabbit } from "../rabbit";
 export class BaseQueueWorker {
 
     /**
-     * экземпляр брокера
+     * Инстанс брокера
      */
-    private rabbitWorker!: Rabbit;
+    private rabbitProvider!: Rabbit;
 
-    public setRabbitProvider(rabbitWorker: Rabbit) {
-        this.rabbitWorker = rabbitWorker;
+    /**
+     * Setter брокера
+     * @param {Rabbit} rabbitProvider - Инстанс брокера
+     */
+    public setRabbitProvider(rabbitProvider: Rabbit) {
+        this.rabbitProvider = rabbitProvider;
     }
 
 }
