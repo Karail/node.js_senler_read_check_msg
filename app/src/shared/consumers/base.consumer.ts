@@ -1,7 +1,7 @@
 import * as amqp from 'amqplib';
-// Rabbit
-import { Rabbit } from "../rabbit";
-// Logger
+// Brokers
+import { Rabbit } from '../rabbit';
+// Services
 import { Logger } from '../services';
 
 export class BaseQueueConsumer {
@@ -16,7 +16,7 @@ export class BaseQueueConsumer {
     private keyPrefix!: string;
 
     /**
-     * setter брокера
+     * Setter брокера
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
     public setRabbitProvider(rabbitProvider: Rabbit): void {
@@ -24,7 +24,7 @@ export class BaseQueueConsumer {
     }
 
     /**
-     * setter префиксa для именования очередей
+     * Setter префиксa для именования очередей
      * @param {string} keyPrefix - Префикс для именования очередей
      */
     public setKeyPrefix(keyPrefix: string) {
@@ -50,7 +50,7 @@ export class BaseQueueConsumer {
     }
 
     /**
-     * отменяет прослушивание по тэгу
+     * Отменяет прослушивание по тэгу
      * @param {string} queueName  - Название очереди
      * @param {string} consumerTag тэг прослушивателя
      */

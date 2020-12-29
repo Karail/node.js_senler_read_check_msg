@@ -1,9 +1,9 @@
 // Resolvers
-import { BaseQueueResolver } from "../../../shared/resolvers";
+import { BaseQueueResolver } from '../../../shared/resolvers';
 // Consumers
-import { MessageCheckQueueConsumer } from "../consumers";
+import { MessageCheckQueueConsumer } from '../consumers';
 // Producers
-import { MessageCheckQueueProducer } from "../porducers";
+import { MessageCheckQueueProducer } from '../producers';
 
 /**
  * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
@@ -13,18 +13,18 @@ import { MessageCheckQueueProducer } from "../porducers";
 export class MessageCheckQueueResolver extends BaseQueueResolver {
 
     constructor(
-        exchangeName = '',
-        keyPrefix = 'message-check'
+        public exchangeName = '',
+        public keyPrefix = 'message-check'
     ) {
         super(new MessageCheckQueueProducer(), new MessageCheckQueueConsumer(), keyPrefix);
     }
 
     async start() {
+        await super.start();
         await this.rabbitProvider.bindQueue(
             this.exchangeName,
-            this.getQueueName,
-            this.exchange.getExchangeName(),
-            this.getQueueName
+            this.keyPrefix,
+            this.exchangeName,
         );
     }
 

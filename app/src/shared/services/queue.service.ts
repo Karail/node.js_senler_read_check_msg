@@ -1,9 +1,9 @@
-// Rabbitmq
-import { Rabbit } from "../rabbit";
+// Brokers
+import { Rabbit } from '../rabbit';
 // Resolvers
-import { BaseQueueResolver } from "../resolvers";
+import { BaseQueueResolver } from '../resolvers';
 // Workers
-import { BaseQueueWorker } from "../workers/base.worker";
+import { BaseQueueWorker } from '../workers/base.worker';
 
 export class QueueService {
 

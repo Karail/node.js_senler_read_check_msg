@@ -4,7 +4,6 @@ dotenv.config();
 import express from 'express';
 // Services
 import { AppService } from './app.service';
-// Logger
 import { Logger } from './shared/services';
 
 const app = express();

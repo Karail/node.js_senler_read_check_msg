@@ -1,9 +1,9 @@
 import * as amqp from 'amqplib';
-// Rabbit
-import { Rabbit } from "../../shared/rabbit";
+// Brokers
+import { Rabbit } from '../../shared/rabbit';
 // Consumer
 import { BaseQueueConsumer } from '../consumers';
-// Logger
+// Services
 import { Logger } from '../services';
 
 export class BaseQueueProducer {

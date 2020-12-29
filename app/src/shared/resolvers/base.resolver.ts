@@ -1,14 +1,13 @@
 import * as amqp from 'amqplib';
-// Rabbit
-import { Rabbit } from "../../shared/rabbit";
+// Brokers
+import { Rabbit } from '../rabbit';
 // Consumers
 import { BaseQueueConsumer } from '../consumers';
 // Producers
 import { BaseQueueProducer } from '../producers';
-// Logger
-import { Logger } from '../services';
-// Serivces
+// Services
 import { QueueService } from '../services/queue.service';
+import { Logger } from '../services';
 // Workers
 import { BaseQueueWorker } from '../workers/base.worker';
 
@@ -26,7 +25,7 @@ export class BaseQueueResolver {
     /**
      * Инстанс брокера
      */
-    private rabbitProvider!: Rabbit;
+    public rabbitProvider!: Rabbit;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
@@ -34,7 +33,7 @@ export class BaseQueueResolver {
     /**
      * Инстанс Worker
      */
-    public worker?: BaseQueueWorker;
+    public worker!: BaseQueueWorker;
     /**
      * Сервис для работы с очередями
      */
@@ -85,7 +84,7 @@ export class BaseQueueResolver {
      * Setter rabbitProvider
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
-    public setRabbitProvider(rabbitProvider: Rabbit) {
+    public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
     /**
@@ -148,14 +147,8 @@ export class BaseQueueResolver {
      * Удаляет очередь
      * @param {amqp.Options.DeleteQueue} Конфигурация удаления очереди, default = { ifEmpty: false }
      */
-    public async deleteQueue(options: amqp.Options.DeleteQueue = { ifEmpty: true }): Promise<void> {
-        try {
-            await this.rabbitProvider.deleteQueue(this.getQueueName(), options);
-            console.log('deleteQueue PREPARE');
-        } catch (e) {
-            console.log(e);
-            throw e;
-        }
+    public async deleteQueue(options: amqp.Options.DeleteQueue = { ifEmpty: true }): Promise<amqp.Replies.DeleteQueue | undefined> {
+        return this.rabbitProvider.deleteQueue(this.getQueueName(), options);
     }
 
     /**

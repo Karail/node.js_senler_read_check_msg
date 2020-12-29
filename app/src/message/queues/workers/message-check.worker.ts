@@ -1,5 +1,5 @@
 // Workers
-import { BaseQueueWorker } from "../../../shared/workers/base.worker";
+import { BaseQueueWorker } from '../../../shared/workers/base.worker';
 
 export class MessageCheckWorker extends BaseQueueWorker {
 

@@ -1,6 +1,6 @@
 import * as amqp from 'amqplib';
 import * as request from 'request-promise';
-// Logger
+// Services
 import { Logger } from '../services';
 
 export class Rabbit {
@@ -67,7 +67,7 @@ export class Rabbit {
             return response;
 
         } catch (e) {
-            Logger.error("[AMQP] getQueuesList error", e.message);
+            Logger.error('[AMQP] getQueuesList error', e.message);
             throw e;
         }
     }
@@ -139,7 +139,7 @@ export class Rabbit {
 
             return true;
         } catch (e) {
-            Logger.error("[AMQP] createChannel error", e.message);
+            Logger.error('[AMQP] createChannel error', e.message);
             throw e;
         }
     }
@@ -161,19 +161,19 @@ export class Rabbit {
 
             channel.prefetch(prefetch)
 
-            channel?.on("error", (err) => {
-                Logger.error("[AMQP] channel error", err.message);
+            channel?.on('error', (err) => {
+                Logger.error('[AMQP] channel error', err.message);
             });
 
-            channel?.on("close", () => {
-                Logger.info("[AMQP] channel closed");
+            channel?.on('close', () => {
+                Logger.info('[AMQP] channel closed');
             });
 
             this.channels?.set(queueName, channel);
 
             return true;
         } catch (e) {
-            Logger.error("[AMQP] createConsumeChannel error", e.message);
+            Logger.error('[AMQP] createConsumeChannel error', e.message);
             throw e;
         }
     }
@@ -185,7 +185,7 @@ export class Rabbit {
      */
     public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
-            
+
             const channel = this.channels?.get(queueName);
 
             const ok = await channel?.assertQueue(queueName, options);
@@ -270,17 +270,15 @@ export class Rabbit {
 
     /**
      * Создать обменник
-     * @param exchangeName - Имя обменник
-     * @param type - Тип обменника
-     * @param options - Конфигурация обменника
+     * @param {string} exchangeName - Имя обменник
+     * @param {string} type - Тип обменника
+     * @param {amqp.Options.AssertExchange} options - Конфигурация обменника
      */
-    public async assertExchange(exchangeName: string, type = '', options?: amqp.Options.AssertExchange) {
+    public async assertExchange(exchangeName: string, type = '', options?: amqp.Options.AssertExchange): Promise<amqp.Replies.AssertExchange | undefined> {
         try {
             const channel = this.channels?.get(exchangeName);
-
-            const res = await channel?.assertExchange(exchangeName, type, options);
-    
-            return res;
+            const exchange = await channel?.assertExchange(exchangeName, type, options);
+            return exchange;
         } catch (e) {
             Logger.error(e);
             throw e;
@@ -289,18 +287,16 @@ export class Rabbit {
 
     /**
      * Привязать очередь к обменнеку
-     * @param exchangeName - Имя обменник
-     * @param queueName - Название очереди
-     * @param pattern - pattern
-     * @param args - Аргументы
+     * @param {string} exchangeName - Имя обменник
+     * @param {string} queueName - Название очереди
+     * @param {string} pattern - pattern
+     * @param {any[]} args - Аргументы
      */
-    public async bindQueue(exchangeName: string, queueName = '', pattern = '', args = []) {
+    public async bindQueue(exchangeName: string, queueName = '', pattern = '', args = []): Promise<amqp.Replies.Empty | undefined> {
         try {
             const channel = this.channels?.get(exchangeName);
-
-            const res = await channel?.bindQueue(queueName, exchangeName, pattern, args);
-    
-            return res;
+            const empty = await channel?.bindQueue(queueName, exchangeName, pattern, args);
+            return empty;
         } catch (e) {
             Logger.error(e);
             throw e;
@@ -309,15 +305,13 @@ export class Rabbit {
 
     /**
      * Опубликовать сообщение в обменник
-     * @param exchangeName - Имя обменник
-     * @param message - Сообщение
-     * @param queueName - Название очереди
-     * @param options - Конфигурация сообщения
+     * @param {string} exchangeName - Имя обменник
+     * @param {any} message - Сообщение
+     * @param {string} queueName - Название очереди
+     * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    public publish(exchangeName: string, message: any, queueName = '', options: amqp.Options.Publish = {persistent: false}): boolean | undefined {
-
+    public publish(exchangeName: string, message: any, queueName = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
         const channel = this.channels?.get(exchangeName);
-
         return channel?.publish(exchangeName, queueName, Buffer.from(message), options);
     }
 }

@@ -1,5 +1,5 @@
 import amqp from 'amqplib';
-// Rabbitmq
+// Brokers
 import { Rabbit } from '../rabbit';
 
 export class BaseExchange {
@@ -9,7 +9,7 @@ export class BaseExchange {
      */
     public rabbitProvider!: Rabbit;
 
-    
+
     constructor(
         private exchangeName: string,
         private exchangeType: string = 'x-delayed-message',
@@ -20,30 +20,46 @@ export class BaseExchange {
      * Setter rabbitProvider
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
-    public setRabbitProvider(rabbitProvider: Rabbit) {
+    public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
 
-    async start() {
+    /**
+     * Инициализирующий метод модуля
+     */
+    async start(): Promise<void> {
         await this.rabbitProvider.createChannel(this.exchangeName);
     }
 
-    getExchangeName() {
+    /**
+     * Getter exchangeName
+     */
+    getExchangeName(): string {
         return `${this.exchangeName}`;
     }
 
-    async assertExchange(options: amqp.Options.AssertExchange & { passive: boolean } = {
-        autoDelete: false,
-        durable: false,
-        passive: true,
-        arguments: {'x-delayed-type': "direct"}
-    }) {
-
-        return this.rabbitProvider.assertExchange(this.exchangeName,this.exchangeType, options);
+    /**
+     * Создать обменник
+     * @param {amqp.Options.AssertExchange} options - Конфигурация обменника
+     */
+    async assertExchange(
+        options: amqp.Options.AssertExchange = {
+            autoDelete: false,
+            durable: false,
+            // passive: true,
+            arguments: { 'x-delayed-type': 'direct' }
+        }
+    ): Promise<amqp.Replies.AssertExchange | undefined> {
+        return this.rabbitProvider.assertExchange(this.exchangeName, this.exchangeType, options);
     }
 
-
-    publish(queueName = '', message: any, options: amqp.Options.Publish): boolean | undefined {
-        return this.rabbitProvider.publish(this.exchangeName, message, queueName, options);
+    /**
+     * Опубликовать сообщение в обменник
+     * @param {string} queueName - Название очереди
+     * @param {any} message - Сообщение
+     * @param {amqp.Options.Publish} options - Конфигурация сообщения
+     */
+    publish(queueName = '', message: any, options?: amqp.Options.Publish): boolean | undefined {
+        return this.rabbitProvider.publish(this.exchangeName, JSON.stringify(message), queueName, options);
     }
 }

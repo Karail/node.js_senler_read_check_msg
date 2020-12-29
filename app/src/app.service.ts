@@ -1,13 +1,14 @@
 // Reslovers
-import { MessageExchange } from './message/exchangers/message.exchanger';
-import { MessageExchangerQueueResolver } from './message/resolvers';
+import { MessageNewQueueResolver } from './message/queues/resolvers/message-new.resolver';
 // Workers
-import { MessageExchangerWorker } from './message/workers';
-// Rabbitmq
+import { MessageNewWorker } from './message/queues/workers';
+// Brokers
 import { Rabbit } from './shared/rabbit';
-// Logger
+// Services
 import { Logger } from './shared/services';
 import { QueueService } from './shared/services/queue.service';
+// Exchangers
+import { MessageExchange } from './message/exchangers/message.exchanger';
 
 export class AppService {
     /**
@@ -23,19 +24,23 @@ export class AppService {
 
         const queueService = new QueueService();
 
-
-        const resolver = await queueService.createQueue(
-            rabbitProvider,
-            new MessageExchangerWorker(),
-            new MessageExchangerQueueResolver(),
-            0
-        );
-
-        const exchange =  new MessageExchange('message-exchange');
+        const exchange = new MessageExchange('message-exchange', 'direct');
 
         exchange.setRabbitProvider(rabbitProvider);
         await exchange.start();
-        await exchange.assertExchange();
+        await exchange.assertExchange({
+            durable: false
+        });
 
+        await queueService.createQueue(
+            rabbitProvider,
+            new MessageNewWorker(),
+            new MessageNewQueueResolver('message-exchange'),
+            0
+        );
+
+        exchange.publish('message-new', {
+            group_id: 1
+        });
     }
 }

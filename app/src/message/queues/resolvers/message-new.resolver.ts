@@ -1,10 +1,10 @@
-// Resolers
+// Resolvers
 import { MessageCheckQueueResolver } from '../resolvers';
-import { BaseQueueResolver } from '../../shared/resolvers';
+import { BaseQueueResolver } from '../../../shared/resolvers';
 // Consumers
 import { MessageNewQueueConsumer } from '../consumers';
 // Producers
-import { MessageNewQueueProducer } from '../porducers';
+import { MessageNewQueueProducer } from '../producers';
 // Workers
 import { MessageCheckWorker } from '../workers';
 
@@ -15,8 +15,20 @@ import { MessageCheckWorker } from '../workers';
  */
 export class MessageNewQueueResolver extends BaseQueueResolver {
 
-    constructor(keyPrefix = 'message-new') {
+    constructor(
+        public exchangeName = '',
+        public keyPrefix = 'message-new'
+    ) {
         super(new MessageNewQueueProducer(), new MessageNewQueueConsumer(), keyPrefix);
+    }
+
+    async start() {
+        await super.start();
+        await this.rabbitProvider.bindQueue(
+            this.exchangeName,
+            this.keyPrefix,
+            this.exchangeName,
+        );
     }
 
     /**
@@ -29,14 +41,26 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 const content = JSON.parse(message.content.toString());
 
-                const resolver = await this.queueService.createQueue(
-                    this.getRabbitProvider(),
-                    new MessageCheckWorker(),
-                    new MessageCheckQueueResolver(`message-check-${content.payload.group_id}`),
-                    0
-                );
+                console.log(content);
 
-                resolver.publishMessage(content.payload);
+                const queues = await this.getQueuesList();
+
+                const isQueueName = queues
+                    .map((item) => item.name)
+                    .includes(`message-check-${content.payload.group_id}`);
+
+                if (isQueueName) {
+                    console.log('is');
+                }
+                else {
+                    console.log('no');
+                    const resolver = await this.queueService.createQueue(
+                        this.getRabbitProvider(),
+                        new MessageCheckWorker(),
+                        new MessageCheckQueueResolver(`message-check-${content.payload.group_id}`),
+                        0
+                    );
+                }
             }
         }, { noAck: true });
     }

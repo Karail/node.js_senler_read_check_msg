@@ -1,5 +1,5 @@
-// Rabbitmq
-import { Rabbit } from "../rabbit";
+// Brokers
+import { Rabbit } from '../rabbit';
 
 export class BaseQueueWorker {
 
@@ -12,8 +12,7 @@ export class BaseQueueWorker {
      * Setter брокера
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
-    public setRabbitProvider(rabbitProvider: Rabbit) {
+    public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
-
 }
