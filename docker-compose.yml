@@ -17,7 +17,6 @@ services:
       - "3003:3000"
 
   rabbitmq:
-    image: rabbitmq:latest
     build:
       context: ./docker/rabbitmq
     volumes:

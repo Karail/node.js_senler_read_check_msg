@@ -18,7 +18,7 @@ class WebHookQueueNewResolver {
 
     constructor() {
         /**
-         * Префикс для именования очередей
+         * Ключь маршрутизации очередей
          */
         this.keyPrefix = 'wh_new';
 

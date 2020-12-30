@@ -11,10 +11,9 @@ export class BaseQueueConsumer {
      */
     private rabbitProvider!: Rabbit
     /**
-     * Префикс для именования очередей
+     * Имя очереди
      */
-    private keyPrefix!: string;
-
+    private queueName!: string;
     /**
      * Setter брокера
      * @param {Rabbit} rabbitProvider - Инстанс брокера
@@ -24,46 +23,43 @@ export class BaseQueueConsumer {
     }
 
     /**
-     * Setter префиксa для именования очередей
-     * @param {string} keyPrefix - Префикс для именования очередей
+     * Setter queueName
+     * @param {string} queueName - Имя очереди
      */
-    public setKeyPrefix(keyPrefix: string) {
-        this.keyPrefix = keyPrefix;
+    public setQueueName(queueName: string) {
+        this.queueName = queueName;
     }
 
     /**
      * Инициализирующий метод модуля
      */
     public async start(): Promise<void> {
-        await this.rabbitProvider.createChannel(this.keyPrefix);
-        Logger.info(`[${this.keyPrefix}] 2.Create rabbit consume channel`);
+        await this.rabbitProvider.createChannel(this.queueName);
+        Logger.info(`[${this.queueName}] 2.Create rabbit consume channel`);
     }
 
     /**
      * Создание потребяителя для очереди
-     * @param {string} queueName - Название очереди
      * @param {Function} callback - Коллбэк для обработки нового сообщения
      * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
-    public consume(queueName: string, callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume): void {
-        this.rabbitProvider.consume(queueName, callback, options);
+    public consume(callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume): void {
+        this.rabbitProvider.consume(this.queueName, callback, options);
     }
 
     /**
      * Отменяет прослушивание по тэгу
-     * @param {string} queueName  - Название очереди
      * @param {string} consumerTag тэг прослушивателя
      */
-    public cancelConsuming(queueName = '', consumerTag: string): void {
-        this.rabbitProvider.cancelConsuming(queueName, consumerTag);
+    public cancelConsuming(consumerTag: string): void {
+        this.rabbitProvider.cancelConsuming(this.queueName, consumerTag);
     }
 
     /**
      * Подтвердить обработку сообщения
-     * @param {string} queueName  - Название очереди
      * @param {amqp.Message} message
      */
-    public ackMessage(queueName = '', message: amqp.Message): void {
-        this.rabbitProvider.ackMessage(queueName, message);
+    public ackMessage(message: amqp.Message): void {
+        this.rabbitProvider.ackMessage(this.queueName, message);
     }
 }

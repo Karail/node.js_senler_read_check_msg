@@ -13,31 +13,31 @@ import { MessageCheckQueueProducer } from '../producers';
 export class MessageCheckQueueResolver extends BaseQueueResolver {
 
     constructor(
-        public exchangeName = '',
-        public keyPrefix = 'message-check'
+        public readonly queueName: string,
+        public readonly keyPrefix: string = '',
+        public readonly exchangeName: string = '',
     ) {
-        super(new MessageCheckQueueProducer(), new MessageCheckQueueConsumer(), keyPrefix);
+        super(new MessageCheckQueueProducer(), new MessageCheckQueueConsumer(), queueName);
     }
 
     async start() {
         await super.start();
         await this.rabbitProvider.bindQueue(
             this.exchangeName,
-            this.keyPrefix,
+            this.queueName,
             this.exchangeName,
         );
     }
 
     /**
      * Добавляет потребителя для сообщений очереди queueName
-     * @param {string} queueName - Название очереди
      */
-    public async addConsumer(queueName: string) {
-        this.consumer.consume(queueName, (message) => {
+    public async addConsumer() {
+        this.consumer.consume((message) => {
             if (message) {
 
                 const content = JSON.parse(message.content.toString());
-                console.log(content);
+                console.log('check ',content);
             }
 
         }, { noAck: true, consumerTag: `consumer-group-${1}` });

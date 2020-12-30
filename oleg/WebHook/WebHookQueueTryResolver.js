@@ -17,7 +17,7 @@ class WebHookQueueTryResolver {
 
     constructor() {
         /**
-         * Префикс для именования очередей
+         * Ключь маршрутизации очередей
          */
         this.keyPrefix = 'wh_try';
 

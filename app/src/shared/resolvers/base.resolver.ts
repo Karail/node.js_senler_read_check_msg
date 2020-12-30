@@ -43,12 +43,12 @@ export class BaseQueueResolver {
      * 
      * @param producer - Инстанс Producer
      * @param consumer - Инстанс Consumer
-     * @param keyPrefix - Префикс для именования очередей
+     * @param queueName - Имя очереди
      */
     constructor(
         public readonly producer: BaseQueueProducer,
         public readonly consumer: BaseQueueConsumer,
-        public readonly keyPrefix: string,
+        public readonly queueName: string,
     ) { }
 
     /**
@@ -63,17 +63,17 @@ export class BaseQueueResolver {
 
             const queueName = this.getQueueName();
 
-            this.producer.setKeyPrefix(queueName);
-            this.consumer.setKeyPrefix(queueName);
+            this.producer.setQueueName(queueName);
+            this.consumer.setQueueName(queueName);
 
             this.producer.setRabbitProvider(this.rabbitProvider);
             this.consumer.setRabbitProvider(this.rabbitProvider);
 
             await this.producer.start();
-            await this.producer.assertQueue(queueName);
+            await this.producer.assertQueue();
 
             await this.consumer.start();
-            await this.addConsumer(queueName);
+            await this.addConsumer();
         } catch (e) {
             Logger.error(e);
             throw e;
@@ -105,25 +105,16 @@ export class BaseQueueResolver {
 
     /**
      * Добавляет потребителя для сообщений очереди routing_key
-     * @param {string} queueName - Название очереди
      */
-    public addConsumer(queueName = ''): void {
+    public addConsumer(): void {
 
-    }
-
-    /**
-     * Создание очереди
-     * @param {string} queueName - Название очереди
-     */
-    public async checkQueue(queueName = ''): Promise<amqp .Replies.AssertQueue | undefined> {
-        return this.rabbitProvider.checkQueue(queueName);
     }
 
     /**
      * Формирует название новой очереди для добавления
      */
     public getQueueName(): string {
-        return `${this.keyPrefix}`;
+        return `${this.queueName}`;
     }
 
     /**
@@ -139,8 +130,7 @@ export class BaseQueueResolver {
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди 
      */
     public publishMessage(payload: any, options?: amqp.Options.Publish): void {
-        const queueName = this.getQueueName();
-        this.producer.publishMessage(queueName, { payload }, options);
+        this.producer.publishMessage({ payload }, options);
     }
 
     /**
@@ -148,7 +138,16 @@ export class BaseQueueResolver {
      * @param {amqp.Options.DeleteQueue} Конфигурация удаления очереди, default = { ifEmpty: false }
      */
     public async deleteQueue(options: amqp.Options.DeleteQueue = { ifEmpty: true }): Promise<amqp.Replies.DeleteQueue | undefined> {
-        return this.rabbitProvider.deleteQueue(this.getQueueName(), options);
+        const queueName = this.getQueueName();
+        return this.rabbitProvider.deleteQueue(queueName, options);
+    }
+
+    /**
+     * Создание очереди
+     */
+    public async checkQueue(): Promise<amqp .Replies.AssertQueue | undefined> {
+        const queueName = this.getQueueName();
+        return this.rabbitProvider.checkQueue(queueName);
     }
 
     /**
@@ -157,4 +156,4 @@ export class BaseQueueResolver {
     public async getQueuesList() {
         return this.rabbitProvider.getQueuesList();
     }
-} 
+}

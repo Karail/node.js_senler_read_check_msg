@@ -222,7 +222,7 @@ export class Rabbit {
      */
     public publishMessage(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
         const channel = this.channels?.get(queueName);
-        channel?.sendToQueue(queueName, Buffer.from(message), options);
+        channel?.sendToQueue(queueName, Buffer.from(JSON.stringify(message)), options);
     }
 
     /**
@@ -288,14 +288,14 @@ export class Rabbit {
     /**
      * Привязать очередь к обменнеку
      * @param {string} exchangeName - Имя обменник
-     * @param {string} queueName - Название очереди
+     * @param {string} keyPrefix - Ключь роутинга очереди
      * @param {string} pattern - pattern
      * @param {any[]} args - Аргументы
      */
-    public async bindQueue(exchangeName: string, queueName = '', pattern = '', args = []): Promise<amqp.Replies.Empty | undefined> {
+    public async bindQueue(exchangeName: string, keyPrefix: string, pattern: string, args = []): Promise<amqp.Replies.Empty | undefined> {
         try {
             const channel = this.channels?.get(exchangeName);
-            const empty = await channel?.bindQueue(queueName, exchangeName, pattern, args);
+            const empty = await channel?.bindQueue(keyPrefix, exchangeName, pattern, args);
             return empty;
         } catch (e) {
             Logger.error(e);
@@ -307,11 +307,11 @@ export class Rabbit {
      * Опубликовать сообщение в обменник
      * @param {string} exchangeName - Имя обменник
      * @param {any} message - Сообщение
-     * @param {string} queueName - Название очереди
+     * @param {string} keyPrefix - Ключь роутинга очереди
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    public publish(exchangeName: string, message: any, queueName = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
+    public publish(exchangeName: string, message: any, keyPrefix = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
         const channel = this.channels?.get(exchangeName);
-        return channel?.publish(exchangeName, queueName, Buffer.from(message), options);
+        return channel?.publish(exchangeName, keyPrefix, Buffer.from(JSON.stringify(message)), options);
     }
 }

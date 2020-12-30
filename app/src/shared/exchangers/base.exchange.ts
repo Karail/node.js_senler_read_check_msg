@@ -55,11 +55,11 @@ export class BaseExchange {
 
     /**
      * Опубликовать сообщение в обменник
-     * @param {string} queueName - Название очереди
-     * @param {any} message - Сообщение
+     * @param {string} keyPrefix - Ключь роутинга очереди
+     * @param {any} payload - Сообщение
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    publish(queueName = '', message: any, options?: amqp.Options.Publish): boolean | undefined {
-        return this.rabbitProvider.publish(this.exchangeName, JSON.stringify(message), queueName, options);
+    publish(keyPrefix = '', payload: any, options?: amqp.Options.Publish): boolean | undefined {
+        return this.rabbitProvider.publish(this.exchangeName, { payload }, keyPrefix, options);
     }
 }

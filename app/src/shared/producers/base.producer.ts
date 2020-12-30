@@ -17,9 +17,9 @@ export class BaseQueueProducer {
      */
     private consumer!: BaseQueueConsumer;
     /**
-     * Префикс для именования очередей
+     * Имя очереди
      */
-    private keyPrefix!: string;
+    private queueName!: string;
 
     /**
      * Setter rabbitProvider
@@ -30,38 +30,36 @@ export class BaseQueueProducer {
     }
 
     /**
-     * Setter keyPrefix
-     * @param {string} keyPrefix - Префикс для именования очередей
+     * Setter queueName
+     * @param {string} queueName - Имя очереди
      */
-    public setKeyPrefix(keyPrefix: string) {
-        this.keyPrefix = keyPrefix;
+    public setQueueName(queueName: string) {
+        this.queueName = queueName;
     }
 
     /**
      * Инициализирующий метод модуля
      */
     public async start(): Promise<void> {
-        await this.rabbitProvider.createChannel(this.keyPrefix);
-        Logger.info(`[${this.keyPrefix}] 1.Create rabbit producer channel`);
+        await this.rabbitProvider.createChannel(this.queueName);
+        Logger.info(`[${this.queueName}] 1.Create rabbit producer channel`);
     }
 
     /**
      * Создание очереди, если ее не существует и получение дополнительных параметров по очереди
      * - Количество сообщений
      * - Количество получателей (consumer)
-     * @param {string} queueName - Название очереди
      */
-    public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
-        return this.rabbitProvider.assertQueue(queueName, options);
+    public async assertQueue(options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
+        return this.rabbitProvider.assertQueue(this.queueName, options);
     }
 
     /**
      * Отправка сообщения в очередь
-     * @param {string} queueName - Название очереди
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
-    public publishMessage(queueName = '', message: any, options?: amqp.Options.Publish): void {
-        this.rabbitProvider.publishMessage(queueName, JSON.stringify(message), options);
+    public publishMessage(message: any, options?: amqp.Options.Publish): void {
+        this.rabbitProvider.publishMessage(this.queueName, message, options);
     }
 }
