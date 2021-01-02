@@ -7,12 +7,9 @@ import { MessageNewQueueConsumer } from '../consumers';
 import { MessageNewQueueProducer } from '../producers';
 // Workers
 import { MessageCheckWorker } from '../workers';
- 
-/**
- * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
- * - Разрешение логики добавления запроса для вебхука в очередь
- * - Разрешение логики обработки запроса для вебхука из очереди
- */
+// Services
+import { Logger } from '../../../shared/services';
+
 export class MessageNewQueueResolver extends BaseQueueResolver {
 
     constructor(
@@ -24,47 +21,52 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
     }
 
     async start() {
-        await super.start();
-        await this.rabbitProvider.bindQueue(
-            this.exchangeName,
-            this.queueName,
-            this.exchangeName,
-        );
+        try {
+            await super.start();
+            await this.rabbitProvider.bindQueue(
+                this.exchangeName,
+                this.queueName,
+                this.exchangeName,
+            );
+        } catch (e) {
+            Logger.error(e);
+            throw e;
+        }
     }
 
-    /**
-     * Добавляет потребителя для сообщений очереди routing_key
-     */
     public addConsumer(): void {
         this.consumer.consume(async (message: any) => {
             if (message) {
 
                 const content = JSON.parse(message.content.toString());
 
-                console.log(content);
+                console.log('new', content);
 
                 const queues = await this.getQueuesList();
 
-                const isQueueName = queues
+                const isQueue = queues
                     .map((item) => item.name)
                     .includes(`message-check-${content.payload.group_id}`);
 
-                if (isQueueName) {
-                    console.log('is');
-                }
-                else {
+                if (!isQueue) {
                     console.log('no');
+
                     const resolver = await this.queueService.createQueue(
-                        this.getRabbitProvider(),
+                        this.rabbitProvider,
                         new MessageCheckWorker(),
                         new MessageCheckQueueResolver(
                             `message-check-${content.payload.group_id}`, 
                             this.keyPrefix, 
                             this.exchangeName
                         ),
-                        0
+                        0,
+                        this.redisPubProvider,
+                        this.redisSubProvider
                     );
-                    resolver.publishMessage(content.payload);
+                    resolver.sendToQueue(content.payload);
+                }
+                else {
+                    console.log('is');
                 }
             }
         }, { noAck: true });

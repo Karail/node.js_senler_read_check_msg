@@ -1,6 +1,6 @@
 import * as amqp from 'amqplib';
-// Brokers
-import { Rabbit } from '../rabbit';
+// Queues
+import { Rabbit, Redis } from '../queues';
 // Consumers
 import { BaseQueueConsumer } from '../consumers';
 // Producers
@@ -25,7 +25,15 @@ export class BaseQueueResolver {
     /**
      * Инстанс брокера
      */
-    public rabbitProvider!: Rabbit;
+    protected rabbitProvider!: Rabbit;
+    /**
+     * Инстанс redis pub
+     */
+    protected redisPubProvider?: Redis;
+    /**
+     * Инстанс redis sub
+     */
+    protected redisSubProvider?: Redis;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
@@ -33,11 +41,11 @@ export class BaseQueueResolver {
     /**
      * Инстанс Worker
      */
-    public worker!: BaseQueueWorker;
+    protected worker!: BaseQueueWorker;
     /**
      * Сервис для работы с очередями
      */
-    public queueService = new QueueService;
+    protected queueService = new QueueService;
 
     /**
      * 
@@ -81,12 +89,35 @@ export class BaseQueueResolver {
     }
 
     /**
+     * Добавляет потребителя для сообщений очереди
+     */
+    protected addConsumer(): void {
+
+    }
+
+    /**
      * Setter rabbitProvider
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
     public setRabbitProvider(rabbitProvider: Rabbit): void {
         this.rabbitProvider = rabbitProvider;
     }
+
+    /**
+     * Setter redisPubProvider
+     * @param {Redis} redisProvider - Инстанс redis
+     */
+    public setRedisPubProvider(redisProvider?: Redis) {
+        this.redisPubProvider = redisProvider;
+    }
+    /**
+     * Setter redisSubProvider
+     * @param {Redis} redisProvider - Инстанс redis
+     */
+    public setRedisSubProvider(redisProvider?: Redis) {
+        this.redisSubProvider = redisProvider;
+    }
+
     /**
      * Setter server_id
      * @param {number} id - server_id
@@ -104,13 +135,6 @@ export class BaseQueueResolver {
     }
 
     /**
-     * Добавляет потребителя для сообщений очереди routing_key
-     */
-    public addConsumer(): void {
-
-    }
-
-    /**
      * Формирует название новой очереди для добавления
      */
     public getQueueName(): string {
@@ -118,19 +142,12 @@ export class BaseQueueResolver {
     }
 
     /**
-     * Getter rabbitProvider
-     */
-    public getRabbitProvider(): Rabbit {
-        return this.rabbitProvider;
-    }
-
-    /**
      * Отправка сообщения в очередь
      * @param {any} payload - Cообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди 
      */
-    public publishMessage(payload: any, options?: amqp.Options.Publish): void {
-        this.producer.publishMessage({ payload }, options);
+    public sendToQueue(payload: any, options?: amqp.Options.Publish): void {
+        this.producer.sendToQueue({ payload }, options);
     }
 
     /**
@@ -143,15 +160,15 @@ export class BaseQueueResolver {
     }
 
     /**
-     * Создание очереди
+     * Проверка очереди на существование
      */
-    public async checkQueue(): Promise<amqp .Replies.AssertQueue | undefined> {
+    public async checkQueue(): Promise<amqp.Replies.AssertQueue | undefined> {
         const queueName = this.getQueueName();
         return this.rabbitProvider.checkQueue(queueName);
     }
 
     /**
-     * Возвращает список очередей по имени
+     * Возвращает список очередей
      */
     public async getQueuesList() {
         return this.rabbitProvider.getQueuesList();

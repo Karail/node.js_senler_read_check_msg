@@ -1,5 +1,5 @@
-// Brokers
-import { Rabbit } from '../rabbit';
+// Queues
+import { Rabbit } from '../queues';
 
 export class BaseQueueWorker {
 

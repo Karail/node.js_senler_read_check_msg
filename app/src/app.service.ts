@@ -1,88 +1,118 @@
 // Reslovers
-import { MessageNewQueueResolver } from './message/queues/resolvers/message-new.resolver';
+import { MessageNewQueueResolver } from './message/queues/resolvers';
 import { MessageCheckQueueResolver } from './message/queues/resolvers';
 // Workers
 import { MessageCheckWorker, MessageNewWorker } from './message/queues/workers';
-// Brokers
-import { Rabbit } from './shared/rabbit';
+// Queues
+import { Rabbit, Redis } from './shared/queues';
 // Services
 import { Logger } from './shared/services';
 import { QueueService } from './shared/services/queue.service';
 // Exchangers
-import { MessageExchange } from './message/exchangers/message.exchanger';
+import { MessageExchange } from './message/exchangers';
+// Consumers
+import { MessageCheckRedisConsumer } from './message/queues/consumers';
+// Cron
+import { MessageCheckCron } from './message/cron';
 
 export class AppService {
 
     private readonly queueService = new QueueService();
 
+    private readonly rabbitProvider = new Rabbit();
+
+    private readonly redisPubProvider = new Redis({
+        port: Number(process.env.REDIS_PORT),
+        host: String(process.env.REDIS_HOST),
+    });
+
+    private readonly redisSubProvider = new Redis({
+        port: Number(process.env.REDIS_PORT),
+        host: String(process.env.REDIS_HOST),
+    });
     /**
      * On Module Init
      */
     public async init() {
+        try {
 
-        const rabbitProvider = new Rabbit();
+            await this.rabbitProvider.createConnection();
 
-        await rabbitProvider.createConnection();
+            Logger.info('Create rabbit connection');
+            Logger.info('Create redis connection');
 
-        Logger.info('Create rabbit connection');
+            await this.initQueues();
+            await this.initCron();
 
-        const exchangeName = 'message-exchange';
-
-        const exchange = new MessageExchange(exchangeName);
-
-        exchange.setRabbitProvider(rabbitProvider);
-        await exchange.start();
-        await exchange.assertExchange({
-            durable: false,
-            autoDelete: false,
-            arguments: { 
-                'x-delayed-type': 'direct'
-            }
-        });
-
-        await this.initQueues(rabbitProvider, exchangeName);
-
-        exchange.publish(exchangeName, {
-            group_id: 1
-        }, {
-            persistent: false,
-            headers: { 
-                'x-delay': 3000
-            }
-        });
-    }
-    private async initQueues(rabbitProvider: Rabbit, exchangeName?: string) {
-
-        const queues = await rabbitProvider.getQueuesList();
-
-        const queueNames = queues.map((item) => item.name);
-
-        for (const queueName of queueNames) {
-
-            if (queueName === 'message-new') {
-                await this.queueService.createQueue(
-                    rabbitProvider,
-                    new MessageNewWorker(),
-                    new MessageNewQueueResolver('message-new', 'key1', exchangeName),
-                    0
-                );
-            }
-            else {
-                await this.queueService.createQueue(
-                    rabbitProvider,
-                    new MessageCheckWorker(),
-                    new MessageCheckQueueResolver(queueName, 'key1', exchangeName),
-                    0
-                );
-            }
+        } catch (e) {
+            Logger.error(e);
+            throw e;
         }
-        if (!queueNames.includes('message-new')) {
-            await this.queueService.createQueue(
-                rabbitProvider,
-                new MessageNewWorker(),
-                new MessageNewQueueResolver('message-new', 'key1', exchangeName),
-                0
+    }
+
+    private initCron() {
+        const cron = new MessageCheckCron(2000);
+        cron.setRedisPubProvider(this.redisPubProvider);
+        cron.setRedisSubProvider(this.redisSubProvider);
+        cron.start();
+    }
+
+    private async initQueues() {
+        try {
+            // Init Exchangers
+            const exchange = await this.queueService.createExchange(
+                this.rabbitProvider,
+                new MessageExchange('message-exchange'),
+                {
+                    durable: false,
+                    autoDelete: false,
+                    arguments: {
+                        'x-delayed-type': 'direct'
+                    }
+                }
             );
+
+            // Init Queues
+            const queues = (await this.rabbitProvider.getQueuesList())
+                .map((item) => item.name)
+                .filter((item) => item !== 'message-new');
+
+            for (const queue of queues) {
+                await this.queueService.createQueue(
+                    this.rabbitProvider,
+                    new MessageCheckWorker(),
+                    new MessageCheckQueueResolver(queue, 'key1', exchange.exchangeName),
+                    0,
+                    this.redisPubProvider,
+                    this.redisSubProvider
+                );
+            }
+            await this.queueService.createQueue(
+                this.rabbitProvider,
+                new MessageNewWorker(),
+                new MessageNewQueueResolver('message-new', 'key1', exchange.exchangeName),
+                0,
+                this.redisPubProvider,
+                this.redisSubProvider
+            );
+
+            // Init Redis Consumer
+            const consumer = new MessageCheckRedisConsumer();
+            consumer.setRedisPubProvider(this.redisPubProvider);
+            consumer.setRedisSubProvider(this.redisSubProvider);
+            await consumer.start();
+
+            exchange.publish(exchange.exchangeName, {
+                group_id: 1
+            }, {
+                persistent: false,
+                headers: {
+                    'x-delay': 1000
+                }
+            });
+        } catch (e) {
+            Logger.error(e);
+            throw e;
         }
     }
 }

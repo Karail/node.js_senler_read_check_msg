@@ -38,7 +38,7 @@ export class Rabbit {
     }
 
     /**
-     * Создание очереди
+     * Проверка очереди на сузествование
      * @param {string} queueName - Название очереди
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
@@ -48,7 +48,7 @@ export class Rabbit {
             const ok = await channel?.checkQueue(queueName);
             return ok;
         } catch (e) {
-            Logger.info(e);
+            Logger.error(e);
             throw e;
         }
     }
@@ -185,7 +185,6 @@ export class Rabbit {
      */
     public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
-
             const channel = this.channels?.get(queueName);
 
             const ok = await channel?.assertQueue(queueName, options);
@@ -203,7 +202,6 @@ export class Rabbit {
      */
     public async deleteQueue(queueName = '', options: amqp.Options.DeleteQueue = { ifUnused: false, ifEmpty: false }): Promise<amqp.Replies.DeleteQueue | undefined> {
         try {
-
             const channel = this.channels?.get(queueName);
 
             const ok = channel?.deleteQueue(queueName, options);
@@ -220,7 +218,7 @@ export class Rabbit {
      * @param {string} message - сообщение
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
-    public publishMessage(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
+    public sendToQueue(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
         const channel = this.channels?.get(queueName);
         channel?.sendToQueue(queueName, Buffer.from(JSON.stringify(message)), options);
     }

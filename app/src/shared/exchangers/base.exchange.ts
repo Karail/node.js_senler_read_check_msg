@@ -1,6 +1,6 @@
 import amqp from 'amqplib';
-// Brokers
-import { Rabbit } from '../rabbit';
+// Queues
+import { Rabbit } from '../queues';
 
 export class BaseExchange {
 
@@ -9,11 +9,9 @@ export class BaseExchange {
      */
     public rabbitProvider!: Rabbit;
 
-
     constructor(
-        private exchangeName: string,
-        private exchangeType: string = 'x-delayed-message',
-
+        public readonly exchangeName: string,
+        public readonly exchangeType: string = 'x-delayed-message',
     ) { }
 
     /**
@@ -27,14 +25,14 @@ export class BaseExchange {
     /**
      * Инициализирующий метод модуля
      */
-    async start(): Promise<void> {
+    public async start(): Promise<void> {
         await this.rabbitProvider.createChannel(this.exchangeName);
     }
 
     /**
      * Getter exchangeName
      */
-    getExchangeName(): string {
+    public getExchangeName(): string {
         return `${this.exchangeName}`;
     }
 
@@ -42,14 +40,8 @@ export class BaseExchange {
      * Создать обменник
      * @param {amqp.Options.AssertExchange} options - Конфигурация обменника
      */
-    async assertExchange(
-        options: amqp.Options.AssertExchange = {
-            autoDelete: false,
-            durable: false,
-            // passive: true,
-            arguments: { 'x-delayed-type': 'direct' }
-        }
-    ): Promise<amqp.Replies.AssertExchange | undefined> {
+    public async assertExchange(
+        options?: amqp.Options.AssertExchange): Promise<amqp.Replies.AssertExchange | undefined> {
         return this.rabbitProvider.assertExchange(this.exchangeName, this.exchangeType, options);
     }
 
@@ -59,7 +51,7 @@ export class BaseExchange {
      * @param {any} payload - Сообщение
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    publish(keyPrefix = '', payload: any, options?: amqp.Options.Publish): boolean | undefined {
+    public publish(keyPrefix = '', payload: any, options?: amqp.Options.Publish): boolean | undefined {
         return this.rabbitProvider.publish(this.exchangeName, { payload }, keyPrefix, options);
     }
 }

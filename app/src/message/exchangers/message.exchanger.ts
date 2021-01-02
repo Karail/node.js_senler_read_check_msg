@@ -1,4 +1,5 @@
-import { BaseExchange } from '../../shared/exchangers/base.exchange';
+// Exchangers
+import { BaseExchange } from '../../shared/exchangers';
 
 export class MessageExchange extends BaseExchange {
 

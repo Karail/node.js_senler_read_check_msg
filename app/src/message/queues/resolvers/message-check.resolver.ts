@@ -4,12 +4,9 @@ import { BaseQueueResolver } from '../../../shared/resolvers';
 import { MessageCheckQueueConsumer } from '../consumers';
 // Producers
 import { MessageCheckQueueProducer } from '../producers';
+// Services
+import { Logger } from '../../../shared/services';
 
-/**
- * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
- * - Разрешение логики добавления запроса для вебхука в очередь
- * - Разрешение логики обработки запроса для вебхука из очереди
- */
 export class MessageCheckQueueResolver extends BaseQueueResolver {
 
     constructor(
@@ -21,23 +18,35 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
     }
 
     async start() {
-        await super.start();
-        await this.rabbitProvider.bindQueue(
-            this.exchangeName,
-            this.queueName,
-            this.exchangeName,
-        );
+        try {
+            await super.start();
+            await this.rabbitProvider.bindQueue(
+                this.exchangeName,
+                this.queueName,
+                this.exchangeName,
+            );
+        } catch (e) {
+            Logger.error(e);
+            throw e;
+        }
     }
 
-    /**
-     * Добавляет потребителя для сообщений очереди queueName
-     */
     public async addConsumer() {
         this.consumer.consume((message) => {
             if (message) {
 
                 const content = JSON.parse(message.content.toString());
-                console.log('check ',content);
+
+                console.log('check', content);
+
+                this.redisSubProvider?.subscribe('messages-queue', (err) => {
+                    if (err) {
+                        Logger.error(err.message);
+                        throw err;
+                    }
+                    this.redisPubProvider?.publish('messages-queue', JSON.stringify(content.payload));
+                    this.redisPubProvider?.sadd('message_set', JSON.stringify(content.payload));
+                });
             }
 
         }, { noAck: true, consumerTag: `consumer-group-${1}` });

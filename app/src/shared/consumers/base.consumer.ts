@@ -1,6 +1,6 @@
 import * as amqp from 'amqplib';
-// Brokers
-import { Rabbit } from '../rabbit';
+// Queues
+import { Rabbit } from '../queues';
 // Services
 import { Logger } from '../services';
 
@@ -34,8 +34,13 @@ export class BaseQueueConsumer {
      * Инициализирующий метод модуля
      */
     public async start(): Promise<void> {
-        await this.rabbitProvider.createChannel(this.queueName);
-        Logger.info(`[${this.queueName}] 2.Create rabbit consume channel`);
+        try {
+            await this.rabbitProvider.createChannel(this.queueName);
+            Logger.info(`[${this.queueName}] 2.Create rabbit consume channel`);
+        } catch (e) {
+            Logger.error(e);
+            throw e;
+        }
     }
 
     /**
