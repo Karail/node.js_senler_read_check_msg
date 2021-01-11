@@ -1,3 +1,4 @@
+import amqp from 'amqplib';
 // Resolvers
 import { BaseQueueResolver } from '../../../shared/resolvers';
 // Consumers
@@ -32,23 +33,29 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
     }
 
     public async addConsumer() {
-        this.consumer.consume((message) => {
+        this.consumer.consume(async (message) => {
             if (message) {
 
                 const content = JSON.parse(message.content.toString());
 
                 console.log('check', content);
 
-                this.redisSubProvider?.subscribe('messages-queue', (err) => {
-                    if (err) {
-                        Logger.error(err.message);
-                        throw err;
-                    }
-                    this.redisPubProvider?.publish('messages-queue', JSON.stringify(content.payload));
-                    this.redisPubProvider?.sadd('message_set', JSON.stringify(content.payload));
-                });
+                const setName = `message_set-${content.group_id}`;
+
+                const messages = await this.redisPubProvider?.smembers(setName);
+
+                if (messages && messages.length > 100) {
+                    const messages = await this.redisPubProvider?.spop(setName);
+                    console.log(messages);
+                }
+
+                this.redisPubProvider?.sadd(setName, JSON.stringify(content.payload));
             }
 
-        }, { noAck: true, consumerTag: `consumer-group-${1}` });
+            setTimeout(() => {
+                this.ackMessage(<amqp.Message>message);
+            }, 1);
+
+        }, { noAck: false, consumerTag: `consumer-group-${1}` });
     }
 }

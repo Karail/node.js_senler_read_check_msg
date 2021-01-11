@@ -10,10 +10,6 @@ import { Logger } from './shared/services';
 import { QueueService } from './shared/services/queue.service';
 // Exchangers
 import { MessageExchange } from './message/exchangers';
-// Consumers
-import { MessageCheckRedisConsumer } from './message/queues/consumers';
-// Cron
-import { MessageCheckCron } from './message/cron';
 
 export class AppService {
 
@@ -42,19 +38,11 @@ export class AppService {
             Logger.info('Create redis connection');
 
             await this.initQueues();
-            await this.initCron();
 
         } catch (e) {
             Logger.error(e);
             throw e;
         }
-    }
-
-    private initCron() {
-        const cron = new MessageCheckCron(2000);
-        cron.setRedisPubProvider(this.redisPubProvider);
-        cron.setRedisSubProvider(this.redisSubProvider);
-        cron.start();
     }
 
     private async initQueues() {
@@ -95,12 +83,6 @@ export class AppService {
                 this.redisPubProvider,
                 this.redisSubProvider
             );
-
-            // Init Redis Consumer
-            const consumer = new MessageCheckRedisConsumer();
-            consumer.setRedisPubProvider(this.redisPubProvider);
-            consumer.setRedisSubProvider(this.redisSubProvider);
-            await consumer.start();
 
             exchange.publish(exchange.exchangeName, {
                 group_id: 1

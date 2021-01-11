@@ -3,17 +3,22 @@ import { BaseCron } from "../../shared/cron";
 
 export class MessageCheckCron extends BaseCron {
 
-    constructor(protected readonly delay: number) {
+    constructor(
+        protected readonly delay: number,
+        protected readonly keyPrefix: number
+    ) {
         super();
     }
 
     protected async job() {
         console.log('timer init');
-        
-        const messages = await this.redisPubProvider.smembers('message_set');
 
-        if (messages.length < 1000 && messages.length > 0) {
-            const messages = await this.redisPubProvider.spop('message_set');
+        const setName = `message_set-${this.keyPrefix}`;
+        
+        const messages = await this.redisPubProvider.smembers(setName);
+
+        if (messages.length < 100 && messages.length > 0) {
+            const messages = await this.redisPubProvider.spop(setName);
             console.log(messages);
         }
     }

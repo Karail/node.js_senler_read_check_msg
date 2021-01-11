@@ -63,6 +63,15 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                         this.redisPubProvider,
                         this.redisSubProvider
                     );
+
+                    if (this.redisPubProvider && this.redisSubProvider) {
+                        
+                        const cron = new MessageCheckCron(2000, content.payload.group_id);
+                        cron.setRedisPubProvider(this.redisPubProvider);
+                        cron.setRedisSubProvider(this.redisSubProvider);
+                        cron.start();
+                    }
+
                     resolver.sendToQueue(content.payload);
                 }
                 else {

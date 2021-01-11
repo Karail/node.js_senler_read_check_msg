@@ -1,4 +1,5 @@
-import * as amqp from 'amqplib';
+import amqp from 'amqplib';
+import { EventEmitter } from 'events';
 // Queues
 import { Rabbit, Redis } from '../queues';
 // Consumers
@@ -42,6 +43,10 @@ export class BaseQueueResolver {
      * Инстанс Worker
      */
     protected worker!: BaseQueueWorker;
+    /**
+     * Инстанс Emitter
+     */
+    protected emitter?: EventEmitter;
     /**
      * Сервис для работы с очередями
      */
@@ -93,6 +98,14 @@ export class BaseQueueResolver {
      */
     protected addConsumer(): void {
 
+    }
+
+    /**
+     * Setter Emitter
+     * @param {Rabbit} emitter - Инстанс брокера
+     */
+    public setEmitter(emitter: EventEmitter): void {
+        this.emitter = emitter;
     }
 
     /**
@@ -172,5 +185,13 @@ export class BaseQueueResolver {
      */
     public async getQueuesList() {
         return this.rabbitProvider.getQueuesList();
+    }
+
+    /**
+     * Подтвердить обработку сообщения
+     * @param {amqp.Message} message
+     */
+    public ackMessage(message: amqp.Message): void {
+        this.consumer.ackMessage(message);
     }
 }
