@@ -9,6 +9,10 @@ import { MessageNewQueueProducer } from '../producers';
 import { MessageCheckWorker } from '../workers';
 // Services
 import { Logger } from '../../../shared/services';
+// Cron
+import { MessageCheckCron, MessageVkQueueCheckCron } from '../../../message/cron';
+// Dto
+import { MessageDto } from 'src/message/dto';
 
 export class MessageNewQueueResolver extends BaseQueueResolver {
 
@@ -34,19 +38,27 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
         }
     }
 
+    /**
+     * Создает очередь message-check которая прослушивает сообщения из своей группы если такой очереди еще не сущаествует и отправляет в эту очередь
+     * Создает cron MessageCheckCron
+     * Создает cron MessageVkQueueCheckCron
+     * для групп сообщений
+     */
     public addConsumer(): void {
         this.consumer.consume(async (message: any) => {
             if (message) {
 
-                const content = JSON.parse(message.content.toString());
+                const content: MessageDto = JSON.parse(message.content.toString()).payload;
 
                 console.log('new', content);
+
+                const keyPrefixQueue = content.group_id;
 
                 const queues = await this.getQueuesList();
 
                 const isQueue = queues
                     .map((item) => item.name)
-                    .includes(`message-check-${content.payload.group_id}`);
+                    .includes(`message-check-${keyPrefixQueue}`);
 
                 if (!isQueue) {
                     console.log('no');
@@ -55,24 +67,27 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                         this.rabbitProvider,
                         new MessageCheckWorker(),
                         new MessageCheckQueueResolver(
-                            `message-check-${content.payload.group_id}`, 
+                            `message-check-${keyPrefixQueue}`, 
                             this.keyPrefix, 
                             this.exchangeName
                         ),
                         0,
                         this.redisPubProvider,
-                        this.redisSubProvider
+                        this.redisSubProvider,
                     );
 
-                    if (this.redisPubProvider && this.redisSubProvider) {
-                        
-                        const cron = new MessageCheckCron(2000, content.payload.group_id);
-                        cron.setRedisPubProvider(this.redisPubProvider);
-                        cron.setRedisSubProvider(this.redisSubProvider);
-                        cron.start();
-                    }
+                    const messageCheckCron = new MessageCheckCron(keyPrefixQueue);
+                    messageCheckCron.setRedisPubProvider(this.redisPubProvider);
+                    messageCheckCron.setRedisSubProvider(this.redisSubProvider);
+                    messageCheckCron.setWorker(new MessageCheckWorker());
+                    messageCheckCron.start();
+                    
+                    const messageVkQueueCheckCron = new MessageVkQueueCheckCron(keyPrefixQueue);
+                    messageVkQueueCheckCron.setRedisPubProvider(this.redisPubProvider);
+                    messageVkQueueCheckCron.setRedisSubProvider(this.redisSubProvider);
+                    messageVkQueueCheckCron.start();
 
-                    resolver.sendToQueue(content.payload);
+                    resolver.sendToQueue(content);
                 }
                 else {
                     console.log('is');

@@ -10,6 +10,8 @@ import { Logger } from './shared/services';
 import { QueueService } from './shared/services/queue.service';
 // Exchangers
 import { MessageExchange } from './message/exchangers';
+// Cron
+import { MessageCheckCron, MessageVkQueueCheckCron } from './message/cron';
 
 export class AppService {
 
@@ -66,14 +68,28 @@ export class AppService {
                 .filter((item) => item !== 'message-new');
 
             for (const queue of queues) {
+
+                const keyPrefixQueue = queue.replace('message-check-', '');
+
                 await this.queueService.createQueue(
                     this.rabbitProvider,
                     new MessageCheckWorker(),
                     new MessageCheckQueueResolver(queue, 'key1', exchange.exchangeName),
                     0,
                     this.redisPubProvider,
-                    this.redisSubProvider
+                    this.redisSubProvider,
                 );
+
+                const messageCheckCron = new MessageCheckCron(keyPrefixQueue);
+                messageCheckCron.setRedisPubProvider(this.redisPubProvider);
+                messageCheckCron.setRedisSubProvider(this.redisSubProvider);
+                messageCheckCron.setWorker(new MessageCheckWorker());
+                messageCheckCron.start();
+                    
+                const messageVkQueueCheckCron = new MessageVkQueueCheckCron(keyPrefixQueue)
+                messageVkQueueCheckCron.setRedisPubProvider(this.redisPubProvider);
+                messageVkQueueCheckCron.setRedisSubProvider(this.redisSubProvider);
+                messageVkQueueCheckCron.start();
             }
             await this.queueService.createQueue(
                 this.rabbitProvider,
@@ -81,10 +97,12 @@ export class AppService {
                 new MessageNewQueueResolver('message-new', 'key1', exchange.exchangeName),
                 0,
                 this.redisPubProvider,
-                this.redisSubProvider
+                this.redisSubProvider,
             );
 
             exchange.publish(exchange.exchangeName, {
+                id: 3,
+                user_id: 2,
                 group_id: 1
             }, {
                 persistent: false,

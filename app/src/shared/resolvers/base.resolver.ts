@@ -1,5 +1,4 @@
 import amqp from 'amqplib';
-import { EventEmitter } from 'events';
 // Queues
 import { Rabbit, Redis } from '../queues';
 // Consumers
@@ -28,13 +27,13 @@ export class BaseQueueResolver {
      */
     protected rabbitProvider!: Rabbit;
     /**
-     * Инстанс redis pub
+     * Инстанс Redis Pub
      */
-    protected redisPubProvider?: Redis;
+    protected redisPubProvider!: Redis;
     /**
-     * Инстанс redis sub
+     * Инстанс Redis Sub
      */
-    protected redisSubProvider?: Redis;
+    protected redisSubProvider!: Redis;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
@@ -44,19 +43,15 @@ export class BaseQueueResolver {
      */
     protected worker!: BaseQueueWorker;
     /**
-     * Инстанс Emitter
-     */
-    protected emitter?: EventEmitter;
-    /**
      * Сервис для работы с очередями
      */
     protected queueService = new QueueService;
 
     /**
      * 
-     * @param producer - Инстанс Producer
-     * @param consumer - Инстанс Consumer
-     * @param queueName - Имя очереди
+     * @param {BaseQueueProducer} producer - Инстанс Producer
+     * @param {BaseQueueConsumer} consumer - Инстанс Consumer
+     * @param {string} queueName - Имя очереди
      */
     constructor(
         public readonly producer: BaseQueueProducer,
@@ -101,14 +96,6 @@ export class BaseQueueResolver {
     }
 
     /**
-     * Setter Emitter
-     * @param {Rabbit} emitter - Инстанс брокера
-     */
-    public setEmitter(emitter: EventEmitter): void {
-        this.emitter = emitter;
-    }
-
-    /**
      * Setter rabbitProvider
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      */
@@ -120,14 +107,14 @@ export class BaseQueueResolver {
      * Setter redisPubProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisPubProvider(redisProvider?: Redis) {
+    public setRedisPubProvider(redisProvider: Redis) {
         this.redisPubProvider = redisProvider;
     }
     /**
      * Setter redisSubProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisSubProvider(redisProvider?: Redis) {
+    public setRedisSubProvider(redisProvider: Redis) {
         this.redisSubProvider = redisProvider;
     }
 
@@ -143,7 +130,7 @@ export class BaseQueueResolver {
      * Setter worker
      * @param {BaseQueueWorker} worker - Инстанс Worker
      */
-    public setMessageWorker(worker: BaseQueueWorker): void {
+    public setWorker(worker: BaseQueueWorker): void {
         this.worker = worker;
     }
 

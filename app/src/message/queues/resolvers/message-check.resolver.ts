@@ -7,8 +7,14 @@ import { MessageCheckQueueConsumer } from '../consumers';
 import { MessageCheckQueueProducer } from '../producers';
 // Services
 import { Logger } from '../../../shared/services';
+// Dto
+import { MessageDto } from 'src/message/dto';
+// Workers
+import { MessageCheckWorker } from '../workers';
 
 export class MessageCheckQueueResolver extends BaseQueueResolver {
+
+    protected readonly worker!: MessageCheckWorker;
 
     constructor(
         public readonly queueName: string,
@@ -32,24 +38,35 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
         }
     }
 
+    /**
+     * получает сообщение от добавляет его в массив redis
+     * при разрешении отправляет в vk-queue и удаляет их из массива redis, если в массиве redis больше 100 сообщений
+     * 
+     */
     public async addConsumer() {
         this.consumer.consume(async (message) => {
             if (message) {
 
-                const content = JSON.parse(message.content.toString());
+                const content: MessageDto = JSON.parse(message.content.toString()).payload;
 
                 console.log('check', content);
 
                 const setName = `message_set-${content.group_id}`;
 
-                const messages = await this.redisPubProvider?.smembers(setName);
+                const permit = await this.redisPubProvider.get('vk-queue-permit');
 
-                if (messages && messages.length > 100) {
-                    const messages = await this.redisPubProvider?.spop(setName);
-                    console.log(messages);
+                if (permit === 'true') {
+                    const messages = await this.redisPubProvider.smembers(setName);
+
+                    if (messages && messages.length > 100) {
+
+                        const messages = await this.redisPubProvider.spop(setName, 100);
+
+                        this.worker.pushToVkQueue(messages.map((message) => JSON.parse(message)));
+                    }
                 }
 
-                this.redisPubProvider?.sadd(setName, JSON.stringify(content.payload));
+                this.redisPubProvider.sadd(setName, JSON.stringify(content));
             }
 
             setTimeout(() => {

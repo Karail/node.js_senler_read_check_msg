@@ -17,7 +17,7 @@ export class Rabbit {
 
     /**
      * 
-     * @param connectionLinkOptions - настройки подключения
+     * @param {any} connectionLinkOptions - настройки подключения
      */
     constructor(
         private readonly connectionLinkOptions?: any
@@ -111,7 +111,7 @@ export class Rabbit {
 
     /**
      * Подтверждение ответа
-     * @param queueName - Название очереди
+     * @param {string} queueName - Название очереди
      * @param {amqp.Message} message - сообщение
      */
     public ackMessage(queueName = '', message: amqp.Message): void {
@@ -121,7 +121,7 @@ export class Rabbit {
 
     /**
      * Создание канала
-     * @param queueName - Название очереди
+     * @param {string} queueName - Название очереди
      */
     public async createChannel(queueName = ''): Promise<boolean> {
         try {
@@ -146,7 +146,7 @@ export class Rabbit {
 
     /**
      * Открывает канал в режиме подтверждения
-     * @param queueName - Название очереди
+     * @param {string} queueName - Название очереди
      * @param {any} config 
      */
     public async createConfirmChannel(queueName = '', config: any = {}): Promise<boolean> {

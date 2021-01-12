@@ -18,20 +18,23 @@ export class QueueService {
      * @param {BaseQueueWorker} worker - Инстанс Worker
      * @param {BaseQueueResolver} resolver - Инстанс Resolver
      * @param {number} serverId - id сервера
+     * @param {Redis} redisPubProvider - Инстанс Redis Pub
+     * @param {Redis} redisSubProvider  - Инстанс Redis Sub
      */
     public async createQueue(
         rabbitProvider: Rabbit,
         worker: BaseQueueWorker,
         resolver: BaseQueueResolver,
         serverId: number,
-        redisPubProvider?: Redis,
-        redisSubProvider?: Redis
+        redisPubProvider: Redis,
+        redisSubProvider: Redis,
+
     ): Promise<BaseQueueResolver> {
         try {
             worker.setRabbitProvider(rabbitProvider);
             resolver.setRabbitProvider(rabbitProvider);
             resolver.setServerId(serverId);
-            resolver.setMessageWorker(worker);
+            resolver.setWorker(worker);
             resolver.setRedisPubProvider(redisPubProvider);
             resolver.setRedisSubProvider(redisSubProvider);
     

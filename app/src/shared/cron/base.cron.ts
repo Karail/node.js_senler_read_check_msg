@@ -1,12 +1,18 @@
 // Queues
 import { Redis } from "../queues";
+// Workers
+import { BaseQueueWorker } from "../workers";
 
 export class BaseCron {
 
+    /**
+     * Инстанс Cron
+     */
     protected timeout!: NodeJS.Timeout
-
+    /**
+     * Задержка вызова
+     */
     protected readonly delay!: number;
-
     /**
      * Инстанс redis pub
      */
@@ -15,38 +21,59 @@ export class BaseCron {
      * Инстанс redis sub
      */
     protected redisSubProvider!: Redis;
+    /**
+     * Инстанс Worker
+     */
+    protected worker!: BaseQueueWorker;
+
 
     /**
      * Setter redisPubProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisPubProvider(redisProvider: Redis) {
+    public setRedisPubProvider(redisProvider: Redis): void {
         this.redisPubProvider = redisProvider;
     }
+
     /**
      * Setter redisSubProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisSubProvider(redisProvider: Redis) {
+    public setRedisSubProvider(redisProvider: Redis): void {
         this.redisSubProvider = redisProvider;
     }
-    
-    public start() {
-        this.init(this.delay);
+
+    /**
+     * Setter worker
+     * @param {BaseQueueWorker} worker - Инстанс Worker
+     */
+    public setWorker(worker: BaseQueueWorker): void {
+        this.worker = worker;
     }
-    private async init(delay: number) {
+    
+    /**
+     * Старт Cron
+     */
+    public start(): void {
+        this.timeout = setTimeout(run.bind(this), this.delay);
 
-        this.timeout = setTimeout(run.bind(this), delay);
-
-        function run(this: any) {
+        function run(this: BaseCron) {
             this.job();
-            setTimeout(run.bind(this), delay);
+            setTimeout(run.bind(this), this.delay);
         }
     }
-    public remove() {
+
+    /**
+     * Убить задачу
+     */
+    public remove(): void {
         clearTimeout(this.timeout);
     }
-    protected job() {
+
+    /**
+     * Бизнес-логика задачи
+     */
+    protected job(): void {
 
     }
 }
