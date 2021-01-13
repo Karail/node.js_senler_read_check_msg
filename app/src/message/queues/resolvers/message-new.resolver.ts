@@ -18,7 +18,6 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
     constructor(
         public readonly queueName: string,
-        public readonly keyPrefix: string = '',
         public readonly exchangeName: string = '',
     ) {
         super(new MessageNewQueueProducer(), new MessageNewQueueConsumer(), queueName);
@@ -66,11 +65,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                     const resolver = await this.queueService.createQueue(
                         this.rabbitProvider,
                         new MessageCheckWorker(),
-                        new MessageCheckQueueResolver(
-                            `message-check-${keyPrefixQueue}`, 
-                            this.keyPrefix, 
-                            this.exchangeName
-                        ),
+                        new MessageCheckQueueResolver(`message-check-${keyPrefixQueue}`, this.exchangeName),
                         0,
                         this.redisPubProvider,
                         this.redisSubProvider,
@@ -85,6 +80,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                     const messageVkQueueCheckCron = new MessageVkQueueCheckCron(keyPrefixQueue);
                     messageVkQueueCheckCron.setRedisPubProvider(this.redisPubProvider);
                     messageVkQueueCheckCron.setRedisSubProvider(this.redisSubProvider);
+                    messageCheckCron.setWorker(new MessageCheckWorker());
                     messageVkQueueCheckCron.start();
 
                     resolver.sendToQueue(content);

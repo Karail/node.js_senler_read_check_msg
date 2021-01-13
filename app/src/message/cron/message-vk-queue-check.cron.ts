@@ -1,7 +1,11 @@
 // Cron
 import { BaseCron } from "../../shared/cron";
+// Workers
+import { MessageCheckWorker } from "../queues/workers";
 
 export class MessageVkQueueCheckCron extends BaseCron {
+
+    protected readonly worker!: MessageCheckWorker;
 
     /**
      * Разрешение на проверку очереди
@@ -28,7 +32,7 @@ export class MessageVkQueueCheckCron extends BaseCron {
 
         if (this.isUpdateFlag) {
 
-            const permit = await this.checkVkQueue();
+            const permit = await this.worker.checkVkQueue();
         
             if (permit) {
                 console.log('push vk-queue');
@@ -43,9 +47,5 @@ export class MessageVkQueueCheckCron extends BaseCron {
                 }, Number(process.env.DELAY_MESSAGE_VK_QUEUE_CHECK_LIMIT));
             }
         }
-    }
-
-    private async checkVkQueue(): Promise<boolean> {
-        return true;
     }
 }

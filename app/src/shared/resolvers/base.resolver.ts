@@ -110,6 +110,7 @@ export class BaseQueueResolver {
     public setRedisPubProvider(redisProvider: Redis) {
         this.redisPubProvider = redisProvider;
     }
+    
     /**
      * Setter redisSubProvider
      * @param {Redis} redisProvider - Инстанс redis

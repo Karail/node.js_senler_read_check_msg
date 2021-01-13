@@ -14,11 +14,10 @@ import { MessageCheckWorker } from '../workers';
 
 export class MessageCheckQueueResolver extends BaseQueueResolver {
 
-    protected readonly worker!: MessageCheckWorker;
+    public readonly worker!: MessageCheckWorker;
 
     constructor(
         public readonly queueName: string,
-        public readonly keyPrefix: string = '',
         public readonly exchangeName: string = '',
     ) {
         super(new MessageCheckQueueProducer(), new MessageCheckQueueConsumer(), queueName);

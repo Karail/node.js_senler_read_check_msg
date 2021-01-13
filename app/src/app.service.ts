@@ -28,6 +28,7 @@ export class AppService {
         port: Number(process.env.REDIS_PORT),
         host: String(process.env.REDIS_HOST),
     });
+
     /**
      * On Module Init
      */
@@ -74,7 +75,7 @@ export class AppService {
                 await this.queueService.createQueue(
                     this.rabbitProvider,
                     new MessageCheckWorker(),
-                    new MessageCheckQueueResolver(queue, 'key1', exchange.exchangeName),
+                    new MessageCheckQueueResolver(queue, exchange.exchangeName),
                     0,
                     this.redisPubProvider,
                     this.redisSubProvider,
@@ -89,12 +90,13 @@ export class AppService {
                 const messageVkQueueCheckCron = new MessageVkQueueCheckCron(keyPrefixQueue)
                 messageVkQueueCheckCron.setRedisPubProvider(this.redisPubProvider);
                 messageVkQueueCheckCron.setRedisSubProvider(this.redisSubProvider);
+                messageCheckCron.setWorker(new MessageCheckWorker());
                 messageVkQueueCheckCron.start();
             }
             await this.queueService.createQueue(
                 this.rabbitProvider,
                 new MessageNewWorker(),
-                new MessageNewQueueResolver('message-new', 'key1', exchange.exchangeName),
+                new MessageNewQueueResolver('message-new', exchange.exchangeName),
                 0,
                 this.redisPubProvider,
                 this.redisSubProvider,

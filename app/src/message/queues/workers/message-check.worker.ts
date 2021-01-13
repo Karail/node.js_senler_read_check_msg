@@ -4,7 +4,7 @@ import { BaseQueueWorker } from '../../../shared/workers/base.worker';
 import { MessageDto } from 'src/message/dto';
 
 export class MessageCheckWorker extends BaseQueueWorker {
-    public pushToVkQueue(messages: MessageDto[]) {
+    public async pushToVkQueue(messages: MessageDto[]): Promise<void> {
         console.log(messages);
 
         const result = {
@@ -16,5 +16,8 @@ export class MessageCheckWorker extends BaseQueueWorker {
         }
 
         console.log(result);
+    }
+    public async checkVkQueue(): Promise<boolean> {
+        return true;
     }
 }

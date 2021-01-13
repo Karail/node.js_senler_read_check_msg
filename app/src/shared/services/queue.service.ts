@@ -51,6 +51,7 @@ export class QueueService {
      * Создание обменника
      * @param {Rabbit} rabbitProvider - Инстанс брокера
      * @param {BaseExchange} exchange - Инстанс обменника
+     * @param {amqp.Options.AssertExchange} assertOptions - Конфигурация обменника
      */
     public async createExchange(
         rabbitProvider: Rabbit,
