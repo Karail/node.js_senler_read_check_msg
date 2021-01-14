@@ -1,0 +1,1 @@
+export { VkQueueResolver } from './vk-queue.resolver';

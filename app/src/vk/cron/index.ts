@@ -1,0 +1,1 @@
+export { VkQueueCheckCron } from './vk-queue-check.cron';

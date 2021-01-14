@@ -2,6 +2,8 @@
 import { Redis } from "../queues";
 // Workers
 import { BaseQueueWorker } from "../workers";
+// Storage
+import { LocalStorage } from "../../local-storage";
 
 export class BaseCron {
 
@@ -14,33 +16,32 @@ export class BaseCron {
      */
     protected readonly delay!: number;
     /**
-     * Инстанс redis pub
+     * Инстанс redis
      */
-    protected redisPubProvider!: Redis;
-    /**
-     * Инстанс redis sub
-     */
-    protected redisSubProvider!: Redis;
+    protected redisProvider!: Redis;
     /**
      * Инстанс Worker
      */
     protected worker!: BaseQueueWorker;
-
+    /**
+     * Инстанс хранилища
+     */
+    protected localStorage!: LocalStorage;
 
     /**
-     * Setter redisPubProvider
-     * @param {Redis} redisProvider - Инстанс redis
+     * Setter localStorage
+     * @param {LocalStorage} localStorage - Инстанс хранилища
      */
-    public setRedisPubProvider(redisProvider: Redis): void {
-        this.redisPubProvider = redisProvider;
+    public setLocalStorage(localStorage: LocalStorage): void {
+        this.localStorage = localStorage;
     }
 
     /**
-     * Setter redisSubProvider
+     * Setter redisProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisSubProvider(redisProvider: Redis): void {
-        this.redisSubProvider = redisProvider;
+    public setRedisProvider(redisProvider: Redis): void {
+        this.redisProvider = redisProvider;
     }
 
     /**
@@ -59,7 +60,7 @@ export class BaseCron {
 
         function run(this: BaseCron) {
             this.job();
-            setTimeout(run.bind(this), this.delay);
+            this.timeout = setTimeout(run.bind(this), this.delay);
         }
     }
 

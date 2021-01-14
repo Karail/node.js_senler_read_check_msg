@@ -1,0 +1,1 @@
+export { VkQueueProducer } from './vk-queue.producer';

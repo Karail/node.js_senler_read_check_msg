@@ -1,5 +1,9 @@
 // Cron
 import { BaseCron } from "../../shared/cron";
+// Jobs
+import { MESSAGE_CHECK_ } from "../queues/resolvers/message-check.resolver";
+import { VK_QUEUE_ } from "../../vk/queues/resolvers/vk-queue.resolver";
+// Wrokers
 import { MessageCheckWorker } from "../queues/workers";
 
 export class MessageCheckCron extends BaseCron {
@@ -22,22 +26,25 @@ export class MessageCheckCron extends BaseCron {
      */
     protected async job() {
 
-        console.log(`timer check ${this.keyPrefix}`);
+        console.log(`timer check [${MESSAGE_CHECK_}${this.keyPrefix}]`);
 
-        const permit = await this.redisPubProvider.get('vk-queue-permit');
+        const permit = this.localStorage.getVkQueuePermit(`${VK_QUEUE_}${this.keyPrefix}`);
         
-        if (permit === 'true') {
+        if (permit === true) {
 
             const setName = `message_set-${this.keyPrefix}`;
 
-            const messages = await this.redisPubProvider.smembers(setName);
+            const messages = await this.redisProvider.smembers(setName);
 
             if (messages.length < 100 && messages.length > 0) {
 
-                const messages = await this.redisPubProvider.spop(setName, 100);
+                const messages = await this.redisProvider.spop(setName, 100);
 
                 this.worker.pushToVkQueue(messages.map((message) => JSON.parse(message)));
             }
+        }
+        else {
+            console.log('нет разрешения на пуш в vk-queue');
         }
     }
 }

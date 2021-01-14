@@ -1,0 +1,1 @@
+export { VkQueueConsumer } from './vk-queue.consumer';

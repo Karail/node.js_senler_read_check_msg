@@ -6,10 +6,11 @@ import { BaseQueueConsumer } from '../consumers';
 // Producers
 import { BaseQueueProducer } from '../producers';
 // Services
-import { QueueService } from '../services/queue.service';
-import { Logger } from '../services';
+import { Logger, QueueService } from '../services';
 // Workers
 import { BaseQueueWorker } from '../workers/base.worker';
+// Storage
+import { LocalStorage } from '../../local-storage';
 
 /**
  * Класс, который инкапсулирует в себе логику работы с очередями для формирования запроса для вебхука
@@ -27,17 +28,9 @@ export class BaseQueueResolver {
      */
     protected rabbitProvider!: Rabbit;
     /**
-     * Инстанс Redis Pub
+     * Инстанс Redis
      */
-    protected redisPubProvider!: Redis;
-    /**
-     * Инстанс Redis Sub
-     */
-    protected redisSubProvider!: Redis;
-    /**
-     * Время через которое удалить очередь при бездействии для consumer
-     */
-    private expiredLimit = 3600000;
+    protected redisProvider!: Redis;
     /**
      * Инстанс Worker
      */
@@ -46,6 +39,18 @@ export class BaseQueueResolver {
      * Сервис для работы с очередями
      */
     protected queueService = new QueueService;
+    /**
+     * Инстанс хранилища
+     */
+    protected localStorage!: LocalStorage;
+    /**
+     * Время через которое удалить очередь при бездействии для consumer
+     */
+    public expiredLimit = Number(process.env.EXPIRED_LIMIT);
+    /**
+     * Дата последнего сообщения в очереди
+     */
+    public dateLastMessage = new Date();
 
     /**
      * 
@@ -104,19 +109,19 @@ export class BaseQueueResolver {
     }
 
     /**
-     * Setter redisPubProvider
-     * @param {Redis} redisProvider - Инстанс redis
+     * Setter localStorage
+     * @param {LocalStorage} localStorage - Инстанс хранилища
      */
-    public setRedisPubProvider(redisProvider: Redis) {
-        this.redisPubProvider = redisProvider;
+    public setLocalStorage(localStorage: LocalStorage): void {
+        this.localStorage = localStorage;
     }
     
     /**
-     * Setter redisSubProvider
+     * Setter redisProvider
      * @param {Redis} redisProvider - Инстанс redis
      */
-    public setRedisSubProvider(redisProvider: Redis) {
-        this.redisSubProvider = redisProvider;
+    public setRedisProvider(redisProvider: Redis): void {
+        this.redisProvider = redisProvider;
     }
 
     /**
@@ -171,7 +176,7 @@ export class BaseQueueResolver {
     /**
      * Возвращает список очередей
      */
-    public async getQueuesList() {
+    public async getQueuesList(): Promise<any[]> {
         return this.rabbitProvider.getQueuesList();
     }
 

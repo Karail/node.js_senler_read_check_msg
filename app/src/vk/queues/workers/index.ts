@@ -1,0 +1,1 @@
+export { VkQueueWorker } from './vk-queue.worker';

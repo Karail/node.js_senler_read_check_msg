@@ -44,7 +44,7 @@ export class Rabbit {
      */
     public async checkQueue(queueName = ''): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
-            const channel = this.channels?.get(queueName);
+            const channel = this.channels.get(queueName);
             const ok = await channel?.checkQueue(queueName);
             return ok;
         } catch (e) {
@@ -100,6 +100,8 @@ export class Rabbit {
 
             this.amqpConnection = connection;
 
+            Logger.info('Create rabbit connection');
+
         } catch (e) {
             Logger.error('[AMQP] createConnection error', e.message);
             setTimeout(() => {
@@ -115,7 +117,7 @@ export class Rabbit {
      * @param {amqp.Message} message - сообщение
      */
     public ackMessage(queueName = '', message: amqp.Message): void {
-        const channel = this.channels?.get(queueName);
+        const channel = this.channels.get(queueName);
         channel?.ack(message);
     }
 
@@ -135,7 +137,7 @@ export class Rabbit {
                 Logger.info('[AMQP] channel closed');
             });
 
-            this.channels?.set(queueName, channel);
+            this.channels.set(queueName, channel);
 
             return true;
         } catch (e) {
@@ -169,7 +171,7 @@ export class Rabbit {
                 Logger.info('[AMQP] channel closed');
             });
 
-            this.channels?.set(queueName, channel);
+            this.channels.set(queueName, channel);
 
             return true;
         } catch (e) {
@@ -185,7 +187,7 @@ export class Rabbit {
      */
     public async assertQueue(queueName = '', options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
         try {
-            const channel = this.channels?.get(queueName);
+            const channel = this.channels.get(queueName);
 
             const ok = await channel?.assertQueue(queueName, options);
             return ok;
@@ -202,7 +204,9 @@ export class Rabbit {
      */
     public async deleteQueue(queueName = '', options: amqp.Options.DeleteQueue = { ifUnused: false, ifEmpty: false }): Promise<amqp.Replies.DeleteQueue | undefined> {
         try {
-            const channel = this.channels?.get(queueName);
+            const channel = this.channels.get(queueName);
+
+            this.channels.delete(queueName);
 
             const ok = channel?.deleteQueue(queueName, options);
             return ok;
@@ -219,7 +223,7 @@ export class Rabbit {
      * @param {amqp.Options.Publish} options - Конфигурация отправки очереди, default = { persistent: true }
      */
     public sendToQueue(queueName = '', message: string, options: amqp.Options.Publish = { persistent: true }): void {
-        const channel = this.channels?.get(queueName);
+        const channel = this.channels.get(queueName);
         channel?.sendToQueue(queueName, Buffer.from(JSON.stringify(message)), options);
     }
 
@@ -230,7 +234,7 @@ export class Rabbit {
      * @param {amqp.Options.Consume} options - Конфигурация консьюмера
      */
     public consume(queueName = '', callback: (message: amqp.ConsumeMessage | null) => void, options: amqp.Options.Consume = { noAck: false }): void {
-        const channel = this.channels?.get(queueName);
+        const channel = this.channels.get(queueName);
         channel?.consume(queueName, callback, options)
     }
 
@@ -241,7 +245,7 @@ export class Rabbit {
      */
     public async getNextMessage(queueName = '', options: amqp.Options.Get = { noAck: false }): Promise<false | amqp.GetMessage | undefined> {
         try {
-            const channel = this.channels?.get(queueName);
+            const channel = this.channels.get(queueName);
             const message = await channel?.get(queueName, options);
             return message;
         } catch (e) {
@@ -257,7 +261,7 @@ export class Rabbit {
      */
     public async cancelConsuming(queueName = '', consumerTag: string): Promise<amqp.Replies.Empty | undefined> {
         try {
-            const channel = this.channels?.get(queueName);
+            const channel = this.channels.get(queueName);
             const ok = await channel?.cancel(consumerTag);
             return ok;
         } catch (e) {
@@ -274,7 +278,7 @@ export class Rabbit {
      */
     public async assertExchange(exchangeName: string, type = '', options?: amqp.Options.AssertExchange): Promise<amqp.Replies.AssertExchange | undefined> {
         try {
-            const channel = this.channels?.get(exchangeName);
+            const channel = this.channels.get(exchangeName);
             const exchange = await channel?.assertExchange(exchangeName, type, options);
             return exchange;
         } catch (e) {
@@ -292,7 +296,7 @@ export class Rabbit {
      */
     public async bindQueue(exchangeName: string, keyPrefix: string, pattern: string, args = []): Promise<amqp.Replies.Empty | undefined> {
         try {
-            const channel = this.channels?.get(exchangeName);
+            const channel = this.channels.get(exchangeName);
             const empty = await channel?.bindQueue(keyPrefix, exchangeName, pattern, args);
             return empty;
         } catch (e) {
@@ -309,7 +313,7 @@ export class Rabbit {
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
     public publish(exchangeName: string, message: any, keyPrefix = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
-        const channel = this.channels?.get(exchangeName);
+        const channel = this.channels.get(exchangeName);
         return channel?.publish(exchangeName, keyPrefix, Buffer.from(JSON.stringify(message)), options);
     }
 }

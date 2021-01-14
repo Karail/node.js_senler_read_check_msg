@@ -10,9 +10,20 @@ import { MessageCheckWorker } from '../workers';
 // Services
 import { Logger } from '../../../shared/services';
 // Cron
-import { MessageCheckCron, MessageVkQueueCheckCron } from '../../../message/cron';
+import { MessageCheckCron } from '../../../message/cron';
 // Dto
-import { MessageDto } from 'src/message/dto';
+import { MessageDto } from '../../../message/dto';
+// Workers
+import { VkQueueWorker } from '../../../vk/queues/workers';
+// Resolvers
+import { VkQueueResolver } from '../../../vk/queues/resolvers';
+// Jobs
+import { VK_QUEUE_ } from '../../../vk/queues/resolvers/vk-queue.resolver';
+import { MESSAGE_CHECK_ } from './message-check.resolver';
+
+// Jobs
+export const MESSAGE_NEW = 'message-new';
+
 
 export class MessageNewQueueResolver extends BaseQueueResolver {
 
@@ -40,12 +51,12 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
     /**
      * Создает очередь message-check которая прослушивает сообщения из своей группы если такой очереди еще не сущаествует и отправляет в эту очередь
      * Создает cron MessageCheckCron
-     * Создает cron MessageVkQueueCheckCron
      * для групп сообщений
      */
     public addConsumer(): void {
         this.consumer.consume(async (message: any) => {
             if (message) {
+                this.dateLastMessage = new Date();
 
                 const content: MessageDto = JSON.parse(message.content.toString()).payload;
 
@@ -57,33 +68,41 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 const isQueue = queues
                     .map((item) => item.name)
-                    .includes(`message-check-${keyPrefixQueue}`);
+                    .includes(`${MESSAGE_CHECK_}${keyPrefixQueue}`);
 
                 if (!isQueue) {
                     console.log('no');
 
+                    const vkQueueResolver = await this.queueService.createQueue(
+                        this.rabbitProvider,
+                        new VkQueueWorker(),
+                        new VkQueueResolver(`${VK_QUEUE_}${keyPrefixQueue}`), 0,
+                        this.redisProvider,
+                        this.localStorage
+                    );
+    
+                    const messageCheckWorker = new MessageCheckWorker();
+                    messageCheckWorker.setVkQueueResolver(vkQueueResolver);
+
                     const resolver = await this.queueService.createQueue(
                         this.rabbitProvider,
-                        new MessageCheckWorker(),
-                        new MessageCheckQueueResolver(`message-check-${keyPrefixQueue}`, this.exchangeName),
+                        messageCheckWorker,
+                        new MessageCheckQueueResolver(`${MESSAGE_CHECK_}${keyPrefixQueue}`, this.exchangeName),
                         0,
-                        this.redisPubProvider,
-                        this.redisSubProvider,
+                        this.redisProvider,
+                        this.localStorage,
                     );
 
-                    const messageCheckCron = new MessageCheckCron(keyPrefixQueue);
-                    messageCheckCron.setRedisPubProvider(this.redisPubProvider);
-                    messageCheckCron.setRedisSubProvider(this.redisSubProvider);
-                    messageCheckCron.setWorker(new MessageCheckWorker());
-                    messageCheckCron.start();
-                    
-                    const messageVkQueueCheckCron = new MessageVkQueueCheckCron(keyPrefixQueue);
-                    messageVkQueueCheckCron.setRedisPubProvider(this.redisPubProvider);
-                    messageVkQueueCheckCron.setRedisSubProvider(this.redisSubProvider);
-                    messageCheckCron.setWorker(new MessageCheckWorker());
-                    messageVkQueueCheckCron.start();
+                    const messageCheckCron = this.queueService.createCron(
+                        new MessageCheckCron(keyPrefixQueue),
+                        messageCheckWorker,
+                        this.redisProvider,
+                        this.localStorage,
+                    );
 
                     resolver.sendToQueue(content);
+
+                    this.localStorage.setQueue({ resolver, crons: [ messageCheckCron ] });
                 }
                 else {
                     console.log('is');

@@ -56,7 +56,9 @@ export class BaseQueueProducer {
      * - Количество получателей (consumer)
      * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async assertQueue(options?: amqp.Options.AssertQueue): Promise<amqp.Replies.AssertQueue | undefined> {
+    public async assertQueue(options: amqp.Options.AssertQueue = {
+        durable: false
+      }): Promise<amqp.Replies.AssertQueue | undefined> {
         return this.rabbitProvider.assertQueue(this.queueName, options);
     }
 

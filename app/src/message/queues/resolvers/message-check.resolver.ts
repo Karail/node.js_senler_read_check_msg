@@ -8,9 +8,14 @@ import { MessageCheckQueueProducer } from '../producers';
 // Services
 import { Logger } from '../../../shared/services';
 // Dto
-import { MessageDto } from 'src/message/dto';
+import { MessageDto } from '../../../message/dto';
 // Workers
 import { MessageCheckWorker } from '../workers';
+// Jobs
+import { VK_QUEUE_ } from '../../../vk/queues/resolvers/vk-queue.resolver';
+
+// Jobs
+export const MESSAGE_CHECK_ = 'message-check-';
 
 export class MessageCheckQueueResolver extends BaseQueueResolver {
 
@@ -45,6 +50,7 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
     public async addConsumer() {
         this.consumer.consume(async (message) => {
             if (message) {
+                this.dateLastMessage = new Date();
 
                 const content: MessageDto = JSON.parse(message.content.toString()).payload;
 
@@ -52,20 +58,20 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
 
                 const setName = `message_set-${content.group_id}`;
 
-                const permit = await this.redisPubProvider.get('vk-queue-permit');
+                const permit = this.localStorage.getVkQueuePermit(`${VK_QUEUE_}${content.group_id}`);
 
-                if (permit === 'true') {
-                    const messages = await this.redisPubProvider.smembers(setName);
+                if (permit === true) {
+                    const messages = await this.redisProvider.smembers(setName);
 
                     if (messages && messages.length > 100) {
 
-                        const messages = await this.redisPubProvider.spop(setName, 100);
+                        const messages = await this.redisProvider.spop(setName, 100);
 
                         this.worker.pushToVkQueue(messages.map((message) => JSON.parse(message)));
                     }
                 }
 
-                this.redisPubProvider.sadd(setName, JSON.stringify(content));
+                this.redisProvider.sadd(setName, JSON.stringify(content));
             }
 
             setTimeout(() => {

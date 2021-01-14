@@ -1,11 +1,30 @@
 // Workers
 import { BaseQueueWorker } from '../../../shared/workers/base.worker';
 // Dto
-import { MessageDto } from 'src/message/dto';
+import { MessageDto } from '../../../message/dto';
+// Resolvers
+import { BaseQueueResolver } from '../../../shared/resolvers';
 
 export class MessageCheckWorker extends BaseQueueWorker {
+
+    /**
+     * Очередь vk-queue для потправки
+     */
+    private vkQueueResolver!: BaseQueueResolver;
+
+    /**
+     * Setter vkQueueResolver
+     * @param {BaseQueueResolver} vkQueueResolver - Очередь vk-queue для потправки
+     */
+    public setVkQueueResolver(vkQueueResolver: BaseQueueResolver) {
+        this.vkQueueResolver = vkQueueResolver;
+    }
+
+    /**
+     * Подготавливает и публикует сообщения в vk-queue
+     * @param messages - Список сообщений
+     */
     public async pushToVkQueue(messages: MessageDto[]): Promise<void> {
-        console.log(messages);
 
         const result = {
             message_ids: messages.map((item) => item.id),
@@ -15,9 +34,6 @@ export class MessageCheckWorker extends BaseQueueWorker {
             group_id: messages[0].group_id,
         }
 
-        console.log(result);
-    }
-    public async checkVkQueue(): Promise<boolean> {
-        return true;
+        this.vkQueueResolver.sendToQueue(result);
     }
 }
