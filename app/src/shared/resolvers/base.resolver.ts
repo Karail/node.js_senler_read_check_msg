@@ -175,9 +175,11 @@ export class BaseQueueResolver {
 
     /**
      * Возвращает список очередей
+     * @param page 
+     * @param name 
      */
-    public async getQueuesList(): Promise<any[]> {
-        return this.rabbitProvider.getQueuesList();
+    public async getQueuesList(page = 1, name = ''): Promise<any[]> {
+        return this.rabbitProvider.getQueuesList(page, name);
     }
 
     /**

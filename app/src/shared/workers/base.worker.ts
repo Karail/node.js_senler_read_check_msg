@@ -6,7 +6,7 @@ export class BaseQueueWorker {
     /**
      * Инстанс брокера
      */
-    private rabbitProvider!: Rabbit;
+    protected rabbitProvider!: Rabbit;
 
     /**
      * Setter брокера

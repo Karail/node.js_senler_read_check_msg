@@ -26,14 +26,24 @@ export class MessageCheckWorker extends BaseQueueWorker {
      */
     public async pushToVkQueue(messages: MessageDto[]): Promise<void> {
 
-        const result = {
-            message_ids: messages.map((item) => item.id),
-            preview_length: 0,
-            extended: 1,
-            fields: null,
-            group_id: messages[0].group_id,
-        }
+        const messageIds: number[] = [];
 
-        this.vkQueueResolver.sendToQueue(result);
+        messages.forEach((message) => {
+            if (!message.read_state) {
+                messageIds.push(message.id);
+            }
+        });
+
+        if (messageIds.length > 0) {
+            const result = {
+                message_ids: messageIds,
+                preview_length: 0,
+                extended: 1,
+                fields: null,
+                group_id: messages[0].group_id,
+            }
+    
+            this.vkQueueResolver.sendToQueue(result);
+        }
     }
 }

@@ -64,13 +64,9 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 const keyPrefixQueue = content.group_id;
 
-                const queues = await this.getQueuesList();
+                const queue = (await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`))[0];
 
-                const isQueue = queues
-                    .map((item) => item.name)
-                    .includes(`${MESSAGE_CHECK_}${keyPrefixQueue}`);
-
-                if (!isQueue) {
+                if (!queue) {
                     console.log('no');
 
                     const vkQueueResolver = await this.queueService.createQueue(
@@ -95,6 +91,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                     const messageCheckCron = this.queueService.createCron(
                         new MessageCheckCron(keyPrefixQueue),
+                        this.rabbitProvider,
                         messageCheckWorker,
                         this.redisProvider,
                         this.localStorage,

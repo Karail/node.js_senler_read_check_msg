@@ -54,16 +54,19 @@ export class QueueService {
     /**
      * Создать Cron
      * @param {BaseCron} cron - Инстанс Cron
+     * @param {Rabbit} rabbitProvider - Инстанс брокера
      * @param {BaseQueueWorker} worker - Инстанс Worker
      * @param {Redis} redisProvider - Инстанс Redis
      * @param {LocalStorage} localStorage - Инстанс хранилища
      */
     public createCron(
         cron: BaseCron,
+        rabbitProvider: Rabbit,
         worker: BaseQueueWorker,
         redisProvider: Redis,
         localStorage: LocalStorage
     ): BaseCron {
+        worker.setRabbitProvider(rabbitProvider)
         cron.setRedisProvider(redisProvider);
         cron.setWorker(worker);
         cron.setLocalStorage(localStorage);

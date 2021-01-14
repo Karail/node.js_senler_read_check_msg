@@ -21,6 +21,15 @@ export class BaseQueueProducer {
      */
     private queueName!: string;
 
+    constructor(
+        /**
+         * Конфигурация создания очереди
+         */
+        private readonly assertQueueoptions: amqp.Options.AssertQueue = { durable: false }
+    ) {
+        
+    }
+
     /**
      * Setter rabbitProvider
      * @param {Rabbit} rabbitProvider - Инстанс брокера
@@ -43,7 +52,7 @@ export class BaseQueueProducer {
     public async start(): Promise<void> {
         try {
             await this.rabbitProvider.createChannel(this.queueName);
-        Logger.info(`[${this.queueName}] 1.Create rabbit producer channel`);
+            Logger.info(`[${this.queueName}] 1.Create rabbit producer channel`);
         } catch (e) {
             Logger.error(e);
             throw e;
@@ -54,12 +63,9 @@ export class BaseQueueProducer {
      * Создание очереди, если ее не существует и получение дополнительных параметров по очереди
      * - Количество сообщений
      * - Количество получателей (consumer)
-     * @param {amqp.Options.AssertQueue} options - Конфигурация создания очереди
      */
-    public async assertQueue(options: amqp.Options.AssertQueue = {
-        durable: false
-      }): Promise<amqp.Replies.AssertQueue | undefined> {
-        return this.rabbitProvider.assertQueue(this.queueName, options);
+    public async assertQueue(): Promise<amqp.Replies.AssertQueue | undefined> {
+        return this.rabbitProvider.assertQueue(this.queueName, this.assertQueueoptions);
     }
 
     /**

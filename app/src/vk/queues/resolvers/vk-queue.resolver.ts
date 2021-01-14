@@ -17,6 +17,6 @@ export class VkQueueResolver extends BaseQueueResolver {
         public readonly queueName: string,
         public readonly exchangeName: string = '',
     ) {
-        super(new VkQueueProducer(), new VkQueueConsumer(), queueName);
+        super(new VkQueueProducer({ durable: false }), new VkQueueConsumer(), queueName);
     }
 }

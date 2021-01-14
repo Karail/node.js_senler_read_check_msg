@@ -1,4 +1,5 @@
 import * as amqp from 'amqplib';
+import { parse } from 'path';
 import * as request from 'request-promise';
 // Services
 import { Logger } from '../services';
@@ -53,19 +54,75 @@ export class Rabbit {
         }
     }
 
+    //#region 
+        // return new Promise(() => {
+    //     try {
+    //         request.get(
+    //             {
+    //                 url: this.api_link + 'queues/' + encodeURIComponent(global.rabbitmq[0].vhost) + '?page=' + page + '&page_size=100&name=vk_&use_regex=false&pagination=true',
+    //                 timeout: 20000,
+    //                 agent: this.agent_http
+    //             },
+    //             (err, response, body) => {
+    //                 try {
+    //                     if (err) {
+    //                         this.error('getListQueue request err', err);
+    //                     } else {
+    //                         if (response.statusCode === 200) {
+    //                             try {
+    //                                 let a = JSON.parse(body);
+    //                                 if (a.items) {                           
+    //                                     this.getListQueue(page + 1, callback);
+    //                                     callback(a.items);
+    //                                 } else {
+    //                                     this.info('getListQueue not found items');
+    //                                 }
+    //                             } catch (err) {
+    //                                 this.error('getListQueue request body', err);
+    //                             }
+    //                         } else if (response.statusCode === 400) {
+    //                             this.info('getListQueue done');
+    //                         } else {
+    //                             this.error('getListQueue request code', response.statusCode);
+    //                         }
+    //                     }
+    //                 } catch (err) {
+    //                     this.error('getListQueue request after', err);
+    //                 }
+    //             }
+    //         );
+    //     } catch (err) {
+    //         this.error('getListQueue', err);
+    //     }
+    // })
+    //#endregion
+
     /**
      * Возвращает список очередей
+     * @param page 
+     * @param name 
      */
-    public async getQueuesList(): Promise<any[]> {
-        try {
-            const url = `${this.getQueuesApiUrl()}/api/queues/`;
+    public async getQueuesList(page = 1, name = ''): Promise<any[]> {
+         try {
 
-            let response = await request.get({ url });
+            let items: any[] = [];
 
-            response = JSON.parse(response);
+            const req = async (page: number) => {
 
-            return response;
+                const url = `${this.getQueuesApiUrl()}/api/queues/%2F?page=${page}&page_size=100&name=${name}&use_regex=false&pagination=true`;
+                let response = JSON.parse(await request.get({ url }));
+                
+                if (response.items.length > 0) {  
+                    items = [...items, ...response.items];                   
+                    req(page + 1);
+                } else {
+                    return items;
+                }
+            }
 
+            await req(page);
+
+            return items;
         } catch (e) {
             Logger.error('[AMQP] getQueuesList error', e.message);
             throw e;
@@ -307,13 +364,13 @@ export class Rabbit {
 
     /**
      * Опубликовать сообщение в обменник
-     * @param {string} exchangeName - Имя обменник
+     * @param {string} exchangeName - Имя обменника
      * @param {any} message - Сообщение
-     * @param {string} keyPrefix - Ключь роутинга очереди
+     * @param {string} queueName - Имя очереди
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    public publish(exchangeName: string, message: any, keyPrefix = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
+    public publish(exchangeName: string, message: any, queueName = '', options: amqp.Options.Publish = { persistent: false }): boolean | undefined {
         const channel = this.channels.get(exchangeName);
-        return channel?.publish(exchangeName, keyPrefix, Buffer.from(JSON.stringify(message)), options);
+        return channel?.publish(exchangeName, queueName, Buffer.from(JSON.stringify(message)), options);
     }
 }

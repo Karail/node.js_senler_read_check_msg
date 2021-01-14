@@ -71,7 +71,7 @@ export class AppService {
             // Init Exchangers
             const exchange = await this.queueService.createExchange(
                 this.rabbitProvider,
-                new MessageExchange('message-exchange'),
+                new MessageExchange('message-exchange', 'x-delayed-message'),
                 {
                     durable: false,
                     autoDelete: false,
@@ -81,10 +81,9 @@ export class AppService {
                 }
             );
 
-            // Init Queues
-            const queues = (await this.rabbitProvider.getQueuesList())
-                .map((item) => item.name)
-                .filter((item) => !item.indexOf(MESSAGE_CHECK_));
+            // // Init Queues
+            const queues = (await this.rabbitProvider.getQueuesList(1, MESSAGE_CHECK_))
+                .map((item) => item.name);
 
             for (const queue of queues) {
 
@@ -111,6 +110,7 @@ export class AppService {
 
                 const messageCheckCron = this.queueService.createCron(
                     new MessageCheckCron(keyPrefixQueue),
+                    this.rabbitProvider,
                     messageCheckWorker,
                     this.redisProvider,
                     this.localStorage,
@@ -129,6 +129,7 @@ export class AppService {
 
             this.queueService.createCron(
                 new MessageCheckInactivityCron(0),
+                this.rabbitProvider,
                 new MessageCheckInactivityWorker(),
                 this.redisProvider,
                 this.localStorage,
@@ -136,6 +137,7 @@ export class AppService {
 
             this.queueService.createCron(
                 new VkQueueCheckCron(0),
+                this.rabbitProvider,
                 new VkQueueWorker(),
                 this.redisProvider,
                 this.localStorage,
@@ -144,7 +146,8 @@ export class AppService {
             exchange.publish(exchange.exchangeName, {
                 id: 3,
                 user_id: 2,
-                group_id: 1
+                group_id: 1,
+                read_state: 0
             }, {
                 persistent: false,
                 headers: {

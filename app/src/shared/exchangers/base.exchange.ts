@@ -11,7 +11,7 @@ export class BaseExchange {
 
     constructor(
         public readonly exchangeName: string,
-        public readonly exchangeType: string = 'x-delayed-message',
+        public readonly exchangeType: string,
     ) { }
 
     /**
@@ -47,11 +47,11 @@ export class BaseExchange {
 
     /**
      * Опубликовать сообщение в обменник
-     * @param {string} keyPrefix - Ключь роутинга очереди
+     * @param {string} queueName - Имя очереди
      * @param {any} payload - Сообщение
      * @param {amqp.Options.Publish} options - Конфигурация сообщения
      */
-    public publish(keyPrefix = '', payload: any, options?: amqp.Options.Publish): boolean | undefined {
-        return this.rabbitProvider.publish(this.exchangeName, { payload }, keyPrefix, options);
+    public publish(queueName = '', payload: any, options?: amqp.Options.Publish): boolean | undefined {
+        return this.rabbitProvider.publish(this.exchangeName, { payload }, queueName, options);
     }
 }
