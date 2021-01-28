@@ -1,5 +1,6 @@
-// Queues
-import { Redis } from "../queues";
+import { Db } from 'mongodb';
+// Databases
+import { Redis } from '../database';
 // Workers
 import { BaseQueueWorker } from "../workers";
 // Storage
@@ -27,6 +28,18 @@ export class BaseCron {
      * Инстанс хранилища
      */
     protected localStorage!: LocalStorage;
+    /**
+     * Инстанс Mongo
+     */
+    protected mongoProvider!: Db;
+
+    /**
+     * Setter mongoProvider
+     * @param {Rabbit} mongoProvider - Инстанс Mongo
+     */
+    public setMongoProvider(mongoProvider: Db): void {
+        this.mongoProvider = mongoProvider;
+    }
 
     /**
      * Setter localStorage

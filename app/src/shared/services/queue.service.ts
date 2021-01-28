@@ -1,6 +1,9 @@
+import { Db } from 'mongodb';
 import amqp from 'amqplib';
 // Queues
-import { Rabbit, Redis } from '../queues';
+import { Rabbit } from '../queues';
+// Databases
+import { Redis } from '../database';
 // Resolvers
 import { BaseQueueResolver } from '../resolvers';
 // Workers
@@ -31,16 +34,19 @@ export class QueueService {
         resolver: BaseQueueResolver,
         serverId: number,
         redisProvider: Redis,
-        localStorage: LocalStorage
+        localStorage: LocalStorage,
+        mongoProvider: Db,
 
     ): Promise<BaseQueueResolver> {
         try {
             worker.setRabbitProvider(rabbitProvider);
+            worker.setMongoProvider(mongoProvider);
             resolver.setRabbitProvider(rabbitProvider);
             resolver.setServerId(serverId);
             resolver.setWorker(worker);
             resolver.setRedisProvider(redisProvider);
             resolver.setLocalStorage(localStorage);
+            resolver.setMongoProvider(mongoProvider);
 
             await resolver.start();
     
@@ -64,13 +70,18 @@ export class QueueService {
         rabbitProvider: Rabbit,
         worker: BaseQueueWorker,
         redisProvider: Redis,
-        localStorage: LocalStorage
+        localStorage: LocalStorage,
+        mongoProvider: Db,
     ): BaseCron {
-        worker.setRabbitProvider(rabbitProvider)
+        worker.setRabbitProvider(rabbitProvider);
+        worker.setMongoProvider(mongoProvider);
         cron.setRedisProvider(redisProvider);
         cron.setWorker(worker);
         cron.setLocalStorage(localStorage);
+        cron.setMongoProvider(mongoProvider);
+
         cron.start();
+
         return cron;
     } 
 

@@ -35,6 +35,9 @@ export class MessageCheckWorker extends BaseQueueWorker {
         });
 
         if (messageIds.length > 0) {
+
+            const Message = this.mongoProvider.collection("messages");
+
             const result = {
                 message_ids: messageIds,
                 preview_length: 0,

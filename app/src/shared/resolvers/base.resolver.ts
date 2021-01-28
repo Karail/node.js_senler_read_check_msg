@@ -1,6 +1,9 @@
+import { Db } from 'mongodb';
 import amqp from 'amqplib';
 // Queues
-import { Rabbit, Redis } from '../queues';
+import { Rabbit } from '../queues';
+// Databases
+import { Redis } from '../database';
 // Consumers
 import { BaseQueueConsumer } from '../consumers';
 // Producers
@@ -43,6 +46,10 @@ export class BaseQueueResolver {
      * Инстанс хранилища
      */
     protected localStorage!: LocalStorage;
+    /**
+     * Инстанс Mongo
+     */
+    protected mongoProvider!: Db;
     /**
      * Время через которое удалить очередь при бездействии для consumer
      */
@@ -98,6 +105,14 @@ export class BaseQueueResolver {
      */
     protected addConsumer(): void {
 
+    }
+
+    /**
+     * Setter mongoProvider
+     * @param {Rabbit} mongoProvider - Инстанс Mongo
+     */
+    public setMongoProvider(mongoProvider: Db): void {
+        this.mongoProvider = mongoProvider;
     }
 
     /**

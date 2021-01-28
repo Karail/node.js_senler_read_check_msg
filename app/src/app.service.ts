@@ -1,11 +1,14 @@
+import { Db } from 'mongodb';
 // Reslovers
 import { MessageNewQueueResolver, MessageCheckQueueResolver } from './message/queues/resolvers';
 import { VkQueueResolver } from './vk/queues/resolvers';
 // Workers
 import { MessageCheckInactivityWorker, MessageCheckWorker, MessageNewWorker } from './message/queues/workers';
 import { VkQueueWorker } from './vk/queues/workers';
+// Databases
+import { Redis, MongoClient } from './shared/database';
 // Queues
-import { Rabbit, Redis } from './shared/queues';
+import { Rabbit } from './shared/queues';
 // Services
 import { Logger } from './shared/services';
 import { QueueService } from './shared/services';
@@ -28,8 +31,13 @@ import { InitQueue } from './consumer';
 
 
 export class AppService {
+
     /**
-     * нстанс хранилища
+     * Инстанс Mongo
+     */
+    private mongoProvider!: Db;
+    /**
+     * Инстанс хранилища
      */
     private readonly localStorage = new LocalStorage();
     /**
@@ -41,7 +49,7 @@ export class AppService {
      */
     private readonly rabbitProvider = new Rabbit();
     /**
-     * Инстанс Redis Pub
+     * Инстанс Redis
      */
     private readonly redisProvider = new Redis({
         port: Number(process.env.REDIS_PORT),
@@ -53,8 +61,9 @@ export class AppService {
      */
     public async init() {
         try {
-
             await InitQueue();
+
+            this.mongoProvider = await MongoClient.createConnection();
 
             await this.rabbitProvider.createConnection();
 
@@ -68,6 +77,7 @@ export class AppService {
 
     private async initQueues() {
         try {
+
             // Init Exchangers
             const exchange = await this.queueService.createExchange(
                 this.rabbitProvider,
@@ -80,7 +90,7 @@ export class AppService {
                     }
                 }
             );
-
+ 
             // // Init Queues
             const queues = (await this.rabbitProvider.getQueuesList(1, MESSAGE_CHECK_))
                 .map((item) => item.name);
@@ -94,7 +104,8 @@ export class AppService {
                     new VkQueueWorker(),
                     new VkQueueResolver(`${VK_QUEUE_}${keyPrefixQueue}`), 0,
                     this.redisProvider,
-                    this.localStorage
+                    this.localStorage,
+                    this.mongoProvider,
                 );
 
                 const messageCheckWorker = new MessageCheckWorker();
@@ -105,7 +116,8 @@ export class AppService {
                     messageCheckWorker,
                     new MessageCheckQueueResolver(queue, exchange.exchangeName), 0,
                     this.redisProvider,
-                    this.localStorage
+                    this.localStorage,
+                    this.mongoProvider,
                 );
 
                 const messageCheckCron = this.queueService.createCron(
@@ -114,6 +126,7 @@ export class AppService {
                     messageCheckWorker,
                     this.redisProvider,
                     this.localStorage,
+                    this.mongoProvider,
                 );
 
                 this.localStorage.setQueue({ resolver, crons: [ messageCheckCron ] });
@@ -124,7 +137,8 @@ export class AppService {
                 new MessageNewWorker(),
                 new MessageNewQueueResolver(MESSAGE_NEW, exchange.exchangeName), 0,
                 this.redisProvider,
-                this.localStorage
+                this.localStorage,
+                this.mongoProvider,
             );
 
             this.queueService.createCron(
@@ -133,6 +147,7 @@ export class AppService {
                 new MessageCheckInactivityWorker(),
                 this.redisProvider,
                 this.localStorage,
+                this.mongoProvider,
             );
 
             this.queueService.createCron(
@@ -141,6 +156,7 @@ export class AppService {
                 new VkQueueWorker(),
                 this.redisProvider,
                 this.localStorage,
+                this.mongoProvider,
             );
 
             exchange.publish(exchange.exchangeName, {

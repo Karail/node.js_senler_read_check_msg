@@ -67,7 +67,7 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
 
                         const messages = await this.redisProvider.spop(setName, 100);
 
-                        this.worker.pushToVkQueue(messages.map((message) => JSON.parse(message)));
+                        this.worker.pushToVkQueue(messages.map((message: any) => JSON.parse(message)));
                     }
                 }
 

@@ -64,7 +64,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 const keyPrefixQueue = content.group_id;
 
-                const queue = (await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`))[0];
+                const queue = (await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`))?.[0];
 
                 if (!queue) {
                     console.log('no');
@@ -74,19 +74,20 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                         new VkQueueWorker(),
                         new VkQueueResolver(`${VK_QUEUE_}${keyPrefixQueue}`), 0,
                         this.redisProvider,
-                        this.localStorage
+                        this.localStorage,
+                        this.mongoProvider,
                     );
-    
+     
                     const messageCheckWorker = new MessageCheckWorker();
                     messageCheckWorker.setVkQueueResolver(vkQueueResolver);
 
                     const resolver = await this.queueService.createQueue(
                         this.rabbitProvider,
                         messageCheckWorker,
-                        new MessageCheckQueueResolver(`${MESSAGE_CHECK_}${keyPrefixQueue}`, this.exchangeName),
-                        0,
+                        new MessageCheckQueueResolver(`${MESSAGE_CHECK_}${keyPrefixQueue}`, this.exchangeName), 0,
                         this.redisProvider,
                         this.localStorage,
+                        this.mongoProvider,
                     );
 
                     const messageCheckCron = this.queueService.createCron(
@@ -95,6 +96,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
                         messageCheckWorker,
                         this.redisProvider,
                         this.localStorage,
+                        this.mongoProvider,
                     );
 
                     resolver.sendToQueue(content);

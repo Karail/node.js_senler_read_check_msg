@@ -1,6 +1,5 @@
-import * as amqp from 'amqplib';
-import { parse } from 'path';
-import * as request from 'request-promise';
+import amqp from 'amqplib';
+import fetch from 'node-fetch';
 // Services
 import { Logger } from '../services';
 
@@ -54,49 +53,6 @@ export class Rabbit {
         }
     }
 
-    //#region 
-        // return new Promise(() => {
-    //     try {
-    //         request.get(
-    //             {
-    //                 url: this.api_link + 'queues/' + encodeURIComponent(global.rabbitmq[0].vhost) + '?page=' + page + '&page_size=100&name=vk_&use_regex=false&pagination=true',
-    //                 timeout: 20000,
-    //                 agent: this.agent_http
-    //             },
-    //             (err, response, body) => {
-    //                 try {
-    //                     if (err) {
-    //                         this.error('getListQueue request err', err);
-    //                     } else {
-    //                         if (response.statusCode === 200) {
-    //                             try {
-    //                                 let a = JSON.parse(body);
-    //                                 if (a.items) {                           
-    //                                     this.getListQueue(page + 1, callback);
-    //                                     callback(a.items);
-    //                                 } else {
-    //                                     this.info('getListQueue not found items');
-    //                                 }
-    //                             } catch (err) {
-    //                                 this.error('getListQueue request body', err);
-    //                             }
-    //                         } else if (response.statusCode === 400) {
-    //                             this.info('getListQueue done');
-    //                         } else {
-    //                             this.error('getListQueue request code', response.statusCode);
-    //                         }
-    //                     }
-    //                 } catch (err) {
-    //                     this.error('getListQueue request after', err);
-    //                 }
-    //             }
-    //         );
-    //     } catch (err) {
-    //         this.error('getListQueue', err);
-    //     }
-    // })
-    //#endregion
-
     /**
      * Возвращает список очередей
      * @param page 
@@ -108,15 +64,20 @@ export class Rabbit {
             let items: any[] = [];
 
             const req = async (page: number) => {
+                try {
+                    const url = `${this.getQueuesApiUrl()}/api/queues/%2F?page=${page}&page_size=100&name=${name}&use_regex=false&pagination=true`;
 
-                const url = `${this.getQueuesApiUrl()}/api/queues/%2F?page=${page}&page_size=100&name=${name}&use_regex=false&pagination=true`;
-                let response = JSON.parse(await request.get({ url }));
-                
-                if (response.items.length > 0) {  
-                    items = [...items, ...response.items];                   
-                    req(page + 1);
-                } else {
-                    return items;
+                    const response = await fetch(url);
+                    const body = await response.json();
+
+                    if (body?.items?.length > 0 && response.status === 200) {  
+                        items = [...items, ...body.items];                   
+                        req(page + 1);
+                    } else {
+                        return items;
+                    }
+                } catch (e) {
+                    throw e;
                 }
             }
 
