@@ -4,7 +4,7 @@ export async function InitQueue() {
     try {
         const connection = await amqp.connect('amqp://rabbitmq')
 
-    const channel = await connection.createChannel();
+    const channel = await connection.createConfirmChannel();
   
     const queue = 'vk-queue-1';
   
@@ -22,7 +22,7 @@ export async function InitQueue() {
      
             console.log(JSON.parse(content),' received!');
 
-            const channelE = await connection.createChannel();
+            const channelE = await connection.createConfirmChannel();
 
             const exchange = 'message-exchange';
 
@@ -46,7 +46,8 @@ export async function InitQueue() {
                         id: 3,
                         user_id: 2,
                         group_id: 1,
-                        read_state: 1
+                        read_state: 0,
+                        attempt: 0,
                     }
                 })),
                 {

@@ -1,0 +1,60 @@
+после запуска сервера
+
+создается обменник message-exchange (x-delayed-message)
+из rabbit берутся все очереди message-check-* привязанные к (group_id)
+    на основе этих (group_id) создаются очереди vk-queue-(group_id), message-check-(group_id) (привязанные к message-exchange), cron message-check-(group_id)
+    созданные очереди и cron записываются в локальное хранилище
+создается очередь message-new привязанная к message-exchange
+создается cron message-check-inactivity 
+создается cron vk-queue-check
+
+очередь message-new
+    берет group_id из сообщения и если нет такой очереди message-check-, 
+    то создает ее, создает очередь vk-queue-(group_id), message-check-(group_id), cron message-check-(group_id)
+    записывает очередь message-check-(group_id) в локальное хранилище
+    отправляет сообщение дальше в только что созданную очередь message-check-(group_id)
+
+очереди message-check-(group_id)
+    запоминается дата последнего сообщения
+    из локального хранилища по имени очереди vk-queue-(group_id) берется флаг permit 
+    если permit = true
+        из redis поля message_set-(group_id) берется массив сообщений 
+        и если сообщений больше 100 
+            удаляет 100 последних сообщений
+            преобразовывает удаленные сообщения в формат
+            {
+                message_ids,
+                preview_length,
+                extended,
+                fields,
+                group_id,
+            }
+            и отправляет в очередь vk-queue-(group_id)
+    добавляет сообщение в redis message_set-(group_id)
+
+cron message-check-(group_id)
+    из локального хранилища по имени очереди vk-queue-(group_id) берется флаг permit 
+        если permit = true
+            из redis поля message_set-(group_id) берется массив сообщений 
+            и если сообщений меньше 100 
+                удаляет 100 последних сообщений
+                преобразовывает удаленные сообщения в формат
+                {
+                    message_ids,
+                    preview_length,
+                    extended,
+                    fields,
+                    group_id,
+                }
+                и отправляет в очередь vk-queue-(group_id)
+
+cron message-check-inactivity 
+    берутся все очереди message-check-* из локального хранилища
+        каждая очередь проверяется на 
+        если (текущая дата - дата последнего сообщения очереди > expired limit)
+            то очедь message-check-(group_id) и cron message-check-(group_id) удаляются
+
+cron vk-queue-check
+    берутся очереди vk-queue-*
+    по каждой очереди создается объект permit { queue.name, queue.message_bytes_unacknowledged < 100000 }
+    и записывается в локальное хранилище

@@ -12,9 +12,9 @@ export class VkQueueWorker extends BaseQueueWorker {
         const queues = await this.rabbitProvider.getQueuesList(1, VK_QUEUE_);
 
         const result = new Map();
-
+        // queue.message_bytes_unacknowledged  < 100000
         queues.forEach((queue) => {
-            result.set(queue.name, queue.message_bytes_unacknowledged  < 100000);
+            result.set(queue.name, true);
         });
 
         return result;

@@ -26,7 +26,7 @@ export class BaseExchange {
      * Инициализирующий метод модуля
      */
     public async start(): Promise<void> {
-        await this.rabbitProvider.createChannel(this.exchangeName);
+        await this.rabbitProvider.createConfirmChannel(this.exchangeName);
     }
 
     /**

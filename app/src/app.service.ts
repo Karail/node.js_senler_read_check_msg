@@ -163,7 +163,9 @@ export class AppService {
                 id: 3,
                 user_id: 2,
                 group_id: 1,
-                read_state: 0
+                read_state: 0,
+                attempt: 0,
+                
             }, {
                 persistent: false,
                 headers: {

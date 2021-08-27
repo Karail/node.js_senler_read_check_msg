@@ -35,7 +35,7 @@ export class BaseQueueConsumer {
      */
     public async start(): Promise<void> {
         try {
-            await this.rabbitProvider.createChannel(this.queueName);
+            await this.rabbitProvider.createConfirmChannel(this.queueName);
             Logger.info(`[${this.queueName}] 2.Create rabbit consume channel`);
         } catch (e) {
             Logger.error(e);

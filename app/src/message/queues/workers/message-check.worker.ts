@@ -28,9 +28,12 @@ export class MessageCheckWorker extends BaseQueueWorker {
 
         const messageIds: number[] = [];
 
+        const attemptIds: any = {};
+
         messages.forEach((message) => {
             if (!message.read_state) {
                 messageIds.push(message.id);
+                attemptIds[message.id] = message.attempt+1;
             }
         });
 
@@ -40,6 +43,7 @@ export class MessageCheckWorker extends BaseQueueWorker {
 
             const result = {
                 message_ids: messageIds,
+                ids_attempt: attemptIds,
                 preview_length: 0,
                 extended: 1,
                 fields: null,

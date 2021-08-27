@@ -51,7 +51,7 @@ export class BaseQueueProducer {
      */
     public async start(): Promise<void> {
         try {
-            await this.rabbitProvider.createChannel(this.queueName);
+            await this.rabbitProvider.createConfirmChannel(this.queueName);
             Logger.info(`[${this.queueName}] 1.Create rabbit producer channel`);
         } catch (e) {
             Logger.error(e);
