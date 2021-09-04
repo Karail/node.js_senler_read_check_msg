@@ -31,7 +31,7 @@ export class MessageCheckWorker extends BaseQueueWorker {
         const attemptIds: any = {};
 
         messages.forEach((message) => {
-            if (!message.read_state) {
+            if (message.attempt < 5) {
                 messageIds.push(message.id);
                 attemptIds[message.id] = message.attempt+1;
             }
