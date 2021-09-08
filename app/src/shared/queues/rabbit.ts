@@ -27,14 +27,14 @@ export class Rabbit {
      * Создание ссылки подключения к брокеру
      */
     public getConnectionLink(): string {
-        return process.env.AMQP_URL || '';
+        return this.connectionLinkOptions.amqpLink;
     }
 
     /**
      * Создание ссылки api для get очередей
      */
     public getQueuesApiUrl(): string {
-        return process.env.RABBITMQ_URL || '';
+        return this.connectionLinkOptions.apiUrl;
     }
 
     /**

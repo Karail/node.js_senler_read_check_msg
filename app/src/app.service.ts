@@ -47,7 +47,17 @@ export class AppService {
     /**
      * Инстанс брокера
      */
-    private readonly rabbitProvider = new Rabbit();
+    private readonly rabbitProvider = new Rabbit({
+        amqpLink: String(process.env.AMQP_URL),
+        apiUrl: String(process.env.RABBITMQ_URL),
+    });
+    /**
+     * Инстанс брокера
+     */
+    private readonly rabbitProviderSenler = new Rabbit({
+        amqpLink: String(process.env.AMQP_URL_SEN),
+        apiUrl: String(process.env.RABBITMQ_URL_SEN),
+    });
     /**
      * Инстанс Redis
      */
@@ -66,6 +76,8 @@ export class AppService {
             this.mongoProvider = await MongoClient.createConnection();
 
             await this.rabbitProvider.createConnection();
+
+            await this.rabbitProviderSenler.createConnection();
 
             await this.initQueues();
 
@@ -90,7 +102,7 @@ export class AppService {
                     }
                 }
             );
- 
+
             // // Init Queues
             const queues = (await this.rabbitProvider.getQueuesList(1, MESSAGE_CHECK_))
                 .map((item) => item.name);
@@ -100,7 +112,7 @@ export class AppService {
                 const keyPrefixQueue = queue.replace(MESSAGE_CHECK_, '');
 
                 const vkQueueResolver = await this.queueService.createQueue(
-                    this.rabbitProvider,
+                    this.rabbitProviderSenler,
                     new VkQueueWorker(),
                     new VkQueueResolver(`${VK_QUEUE_}${keyPrefixQueue}`), 0,
                     this.redisProvider,
@@ -129,7 +141,7 @@ export class AppService {
                     this.mongoProvider,
                 );
 
-                this.localStorage.setQueue({ resolver, crons: [ messageCheckCron ] });
+                this.localStorage.setQueue({ resolver, crons: [messageCheckCron] });
             }
 
             await this.queueService.createQueue(
@@ -165,7 +177,7 @@ export class AppService {
                 group_id: 1,
                 read_state: 0,
                 attempt: 0,
-                
+
             }, {
                 persistent: false,
                 headers: {
