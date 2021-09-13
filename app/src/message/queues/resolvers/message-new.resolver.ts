@@ -20,6 +20,7 @@ import { VkQueueResolver } from '../../../vk/queues/resolvers';
 // Jobs
 import { VK_QUEUE_ } from '../../../vk/queues/resolvers/vk-queue.resolver';
 import { MESSAGE_CHECK_ } from './message-check.resolver';
+import {Rabbit} from "../../../shared/queues";
 
 // Jobs
 export const MESSAGE_NEW = 'message-new';
@@ -30,6 +31,7 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
     constructor(
         public readonly queueName: string,
         public readonly exchangeName: string = '',
+        public rabbitProviderSenler: Rabbit
     ) {
         super(new MessageNewQueueProducer(), new MessageNewQueueConsumer(), queueName);
     }
@@ -62,22 +64,23 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 console.log('new', content);
 
-                const keyPrefixQueue = content.group_id;
+                const keyPrefixQueue = content.vk_group_id;
 
                 const queue = (await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`))?.[0];
 
                 if (!queue) {
                     console.log('no');
 
+
                     const vkQueueResolver = await this.queueService.createQueue(
-                        this.rabbitProvider,
+                        this.rabbitProviderSenler,
                         new VkQueueWorker(),
                         new VkQueueResolver(`${VK_QUEUE_}${keyPrefixQueue}`), 0,
                         this.redisProvider,
                         this.localStorage,
                         this.mongoProvider,
                     );
-     
+
                     const messageCheckWorker = new MessageCheckWorker();
                     messageCheckWorker.setVkQueueResolver(vkQueueResolver);
 

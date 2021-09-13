@@ -21,6 +21,7 @@ export class LocalStorage {
      * @param {Queue} queue - очередь и список cron
      */
     public setVkQueuePermit(queueName: string, permit: boolean) {
+        console.log('.setVkQueuePermit ' , queueName );
         return this.vkQueuePermits.set(queueName, permit);
     }
 
@@ -29,6 +30,7 @@ export class LocalStorage {
      * @param {string} queueName - Имя очереди
      */
     public getVkQueuePermit(queueName: string) {
+        console.log('.getVkQueuePermit ' , queueName ,this.vkQueuePermits);
         return this.vkQueuePermits.get(queueName);
     }
 

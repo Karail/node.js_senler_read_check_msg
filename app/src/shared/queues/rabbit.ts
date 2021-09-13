@@ -16,7 +16,7 @@ export class Rabbit {
     public channels: Map<string, amqp.Channel> = new Map();
 
     /**
-     * 
+     *
      * @param {any} connectionLinkOptions - настройки подключения
      */
     constructor(
@@ -55,8 +55,8 @@ export class Rabbit {
 
     /**
      * Возвращает список очередей
-     * @param page 
-     * @param name 
+     * @param page
+     * @param name
      */
     public async getQueuesList(page = 1, name = ''): Promise<any[]> {
          try {
@@ -70,8 +70,8 @@ export class Rabbit {
                     const response = await fetch(url);
                     const body = await response.json();
 
-                    if (body?.items?.length > 0 && response.status === 200) {  
-                        items = [...items, ...body.items];                   
+                    if (body?.items?.length > 0 && response.status === 200) {
+                        items = [...items, ...body.items];
                         req(page + 1);
                     } else {
                         return items;
@@ -167,7 +167,7 @@ export class Rabbit {
     /**
      * Открывает канал в режиме подтверждения
      * @param {string} queueName - Название очереди
-     * @param {any} config 
+     * @param {any} config
      */
     public async createConfirmChannel(queueName = '', config: any = {}): Promise<boolean> {
         try {

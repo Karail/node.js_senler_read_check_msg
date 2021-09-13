@@ -27,7 +27,7 @@ export class BaseQueueProducer {
          */
         private readonly assertQueueoptions: amqp.Options.AssertQueue = { durable: false }
     ) {
-        
+
     }
 
     /**
@@ -65,7 +65,9 @@ export class BaseQueueProducer {
      * - Количество получателей (consumer)
      */
     public async assertQueue(): Promise<amqp.Replies.AssertQueue | undefined> {
+        console.log('.assertQueue',this.queueName,this.assertQueueoptions);
         return this.rabbitProvider.assertQueue(this.queueName, this.assertQueueoptions);
+
     }
 
     /**

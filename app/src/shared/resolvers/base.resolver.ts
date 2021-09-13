@@ -60,7 +60,7 @@ export class BaseQueueResolver {
     public dateLastMessage = new Date();
 
     /**
-     * 
+     *
      * @param {BaseQueueProducer} producer - Инстанс Producer
      * @param {BaseQueueConsumer} consumer - Инстанс Consumer
      * @param {string} queueName - Имя очереди
@@ -130,7 +130,7 @@ export class BaseQueueResolver {
     public setLocalStorage(localStorage: LocalStorage): void {
         this.localStorage = localStorage;
     }
-    
+
     /**
      * Setter redisProvider
      * @param {Redis} redisProvider - Инстанс redis
@@ -165,9 +165,10 @@ export class BaseQueueResolver {
     /**
      * Отправка сообщения в очередь
      * @param {any} payload - Cообщение
-     * @param {amqp.Options.Publish} options - Конфигурация отправки очереди 
+     * @param {amqp.Options.Publish} options - Конфигурация отправки очереди
      */
     public sendToQueue(payload: any, options?: amqp.Options.Publish): void {
+        console.log('.sendToQueue',{ payload },'---',payload);
         this.producer.sendToQueue({ payload }, options);
     }
 
@@ -190,8 +191,8 @@ export class BaseQueueResolver {
 
     /**
      * Возвращает список очередей
-     * @param page 
-     * @param name 
+     * @param page
+     * @param name
      */
     public async getQueuesList(page = 1, name = ''): Promise<any[]> {
         return this.rabbitProvider.getQueuesList(page, name);

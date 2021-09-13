@@ -14,4 +14,8 @@ app.listen(port, async () => {
     const appService = new AppService();
     Logger.info(`microservice started ${port}`);
     appService.init();
+
+
+
+
 });

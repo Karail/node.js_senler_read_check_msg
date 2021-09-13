@@ -1,0 +1,88 @@
+version: '3'
+
+services:
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    command: npm start
+    volumes:
+      - ./app:/usr/src/app
+    links:
+      - rabbitmq-senlermsg
+#      - senler-msg-mongodb
+    depends_on:
+      - rabbitmq-senlermsg
+#      - senler-msg-mongodb
+    ports:
+      - "3353:3000"
+    networks:
+      - senler-local
+
+  rabbitmq-senlermsg:
+    hostname: rabbitmq_senlermsg
+    build:
+      context: ./docker/rabbitmq
+    volumes:
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+       - 5666:5672
+       - 15899:15672
+    networks:
+      - senler-local
+
+  senler-msg-redis:
+    hostname: senler_msg_redis
+    image: redis:alpine
+    command:
+      - 'redis-server'
+      - '--loglevel ${REDIS_LOGLEVEL:-warning}'
+      - '--maxmemory ${REDIS_MAXMEM:-1024mb}'
+      - '--maxmemory-policy ${REDIS_POLICY:-noeviction}'
+      - '--port 6679'
+    ports:
+      - "6679:6679"
+    expose:
+        - "6679"
+    networks:
+      - senler-local
+
+#  senler-msg-mongodb:
+#    hostname: senler_mongodb
+#    image: mongo
+#    # environment:
+#    #   MONGO_INITDB_ROOT_USERNAME: root
+#    #   MONGO_INITDB_ROOT_PASSWORD: root
+#    # volumes:
+#    #   - ./docker/mongo-volume:/data/db
+#    ports:
+#      - "27037:27017"
+#    networks:
+#      - senler-local
+
+  mongodb:
+    image: mongo
+    container_name: mongodb-senlermsg
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: root
+    #   MONGO_INITDB_ROOT_PASSWORD: root
+    # volumes:
+    #   - ./docker/mongo-volume:/data/db
+    ports:
+      - "27025:27017"
+
+
+  docker-host:
+    image: qoomon/docker-host
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    restart: on-failure
+    networks:
+      - senler-local
+
+networks:
+  senler-local:
+    external: true
+    name: senler-local-network

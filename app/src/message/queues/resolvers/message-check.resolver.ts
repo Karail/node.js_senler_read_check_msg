@@ -45,7 +45,7 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
     /**
      * получает сообщение от добавляет его в массив redis
      * при разрешении отправляет в vk-queue и удаляет их из массива redis, если в массиве redis больше 100 сообщений
-     * 
+     *
      */
     public async addConsumer() {
         this.consumer.consume(async (message) => {
@@ -56,9 +56,9 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
 
                 console.log('check', content);
 
-                const setName = `message_set-${content.group_id}`;
+                const setName = `message_set-${content.vk_group_id}`;
 
-                const permit = this.localStorage.getVkQueuePermit(`${VK_QUEUE_}${content.group_id}`);
+                const permit = this.localStorage.getVkQueuePermit(`${VK_QUEUE_}${content.vk_group_id}`);
 
                 if (permit === true) {
                     const messages = await this.redisProvider.smembers(setName);

@@ -29,16 +29,22 @@ export class MessageCheckCron extends BaseCron {
         console.log(`timer check [${MESSAGE_CHECK_}${this.keyPrefix}]`);
 
         const permit = this.localStorage.getVkQueuePermit(`${VK_QUEUE_}${this.keyPrefix}`);
-        
+
+        console.log('JOB',permit);
+
         if (permit === true) {
 
             const setName = `message_set-${this.keyPrefix}`;
 
             const messages = await this.redisProvider.smembers(setName);
 
+            console.log('JOB messages',messages,messages.length < 100 && messages.length > 0);
+
             if (messages.length < 100 && messages.length > 0) {
 
                 const messages = await this.redisProvider.spop(setName, 100);
+
+
 
                 this.worker.pushToVkQueue(messages.map((message) => JSON.parse(message)));
             }

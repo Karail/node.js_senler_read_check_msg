@@ -64,6 +64,8 @@ export class AppService {
     private readonly redisProvider = new Redis({
         port: Number(process.env.REDIS_PORT),
         host: String(process.env.REDIS_HOST),
+
+
     });
 
     /**
@@ -71,7 +73,8 @@ export class AppService {
      */
     public async init() {
         try {
-            await InitQueue();
+          //  await InitQueue();
+
 
             this.mongoProvider = await MongoClient.createConnection();
 
@@ -144,10 +147,13 @@ export class AppService {
                 this.localStorage.setQueue({ resolver, crons: [messageCheckCron] });
             }
 
+
+
+
             await this.queueService.createQueue(
                 this.rabbitProvider,
                 new MessageNewWorker(),
-                new MessageNewQueueResolver(MESSAGE_NEW, exchange.exchangeName), 0,
+                new MessageNewQueueResolver(MESSAGE_NEW, exchange.exchangeName, this.rabbitProviderSenler), 0,
                 this.redisProvider,
                 this.localStorage,
                 this.mongoProvider,
@@ -162,29 +168,29 @@ export class AppService {
                 this.mongoProvider,
             );
 
-            this.queueService.createCron(
-                new VkQueueCheckCron(0),
-                this.rabbitProvider,
-                new VkQueueWorker(),
-                this.redisProvider,
-                this.localStorage,
-                this.mongoProvider,
-            );
+                        this.queueService.createCron(
+                            new VkQueueCheckCron(0),
+                            this.rabbitProviderSenler,
+                            new VkQueueWorker(),
+                            this.redisProvider,
+                            this.localStorage,
+                            this.mongoProvider,
+                        );
+            /*
+                                 exchange.publish(exchange.exchangeName, {
+                                     id: 3,
+                                     user_id: 2,
+                                     group_id: 1,
+                                     read_state: 0,
+                                     attempt: 0,
 
-            exchange.publish(exchange.exchangeName, {
-                id: 3,
-                user_id: 2,
-                group_id: 1,
-                read_state: 0,
-                attempt: 0,
-
-            }, {
-                persistent: false,
-                headers: {
-                    'x-delay': 1000
-                }
-            });
-
+                                 }, {
+                                     persistent: false,
+                                     headers: {
+                                         'x-delay': 1000
+                                     }
+                                 });
+                     */
             // setTimeout(() => {
             //     exchange.publish(exchange.exchangeName, {
             //         id: 4,
