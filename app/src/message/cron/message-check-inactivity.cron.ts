@@ -30,6 +30,7 @@ export class MessageCheckInactivityCron extends BaseCron {
 
         queues.forEach((queue) => {
 
+
             if (
             now.getTime() - queue.resolver.dateLastMessage.getTime() > queue.resolver.expiredLimit
             ) {

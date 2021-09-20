@@ -168,14 +168,14 @@ export class AppService {
                 this.mongoProvider,
             );
 
-                        this.queueService.createCron(
-                            new VkQueueCheckCron(0),
-                            this.rabbitProviderSenler,
-                            new VkQueueWorker(),
-                            this.redisProvider,
-                            this.localStorage,
-                            this.mongoProvider,
-                        );
+                this.queueService.createCron(
+                    new VkQueueCheckCron(0),
+                    this.rabbitProviderSenler,
+                    new VkQueueWorker(),
+                    this.redisProvider,
+                    this.localStorage,
+                    this.mongoProvider,
+                );
             /*
                                  exchange.publish(exchange.exchangeName, {
                                      id: 3,

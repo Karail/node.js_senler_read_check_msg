@@ -66,10 +66,13 @@ export class MessageNewQueueResolver extends BaseQueueResolver {
 
                 const keyPrefixQueue = content.vk_group_id;
 
-                const queue = (await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`))?.[0];
+                const queues = await this.getQueuesList(1, `${MESSAGE_CHECK_}${keyPrefixQueue}`);
 
-                if (!queue) {
+              //  console.log(queues, `${MESSAGE_CHECK_}${keyPrefixQueue}`);
+
+                if (queues.length <= 0) {
                     console.log('no');
+
 
 
                     const vkQueueResolver = await this.queueService.createQueue(

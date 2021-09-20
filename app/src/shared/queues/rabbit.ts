@@ -1,8 +1,9 @@
 import amqp from 'amqplib';
-import fetch from 'node-fetch';
+import  request from 'request';
 // Services
 import { Logger } from '../services';
 
+let http = require('http');
 export class Rabbit {
 
     /**
@@ -15,13 +16,20 @@ export class Rabbit {
      */
     public channels: Map<string, amqp.Channel> = new Map();
 
+    public agent_http: any;
     /**
      *
      * @param {any} connectionLinkOptions - настройки подключения
      */
     constructor(
         private readonly connectionLinkOptions?: any
-    ) { }
+    ) {
+        this.agent_http = new http.Agent({
+            keepAlive: true,
+            maxSockets: 1000,
+            keepAliveMsecs: 3000
+        });
+    }
 
     /**
      * Создание ссылки подключения к брокеру
@@ -59,6 +67,56 @@ export class Rabbit {
      * @param name
      */
     public async getQueuesList(page = 1, name = ''): Promise<any[]> {
+        try {
+
+            let items: any[] = [];
+
+            const req = async (page: number) => {
+                try {
+                    const url = `${this.getQueuesApiUrl()}/api/queues/%2F?page=${page}&page_size=100&name=${name}&use_regex=false&pagination=true`;
+
+
+                    const response: any = await new Promise((resolve, reject) => {
+                        request.get(url, { agent: this.agent_http},(err, response, body) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve(response);
+                            }
+
+                        })
+                    })
+
+                    //const response = await fetch(url);
+                    const body = JSON.parse(response.body);
+                    //const body = await response.json();
+
+                    if (body?.items?.length > 0 && response.statusCode === 200) {
+                        items = [...items, ...body.items];
+                        req(page + 1);
+                    } else {
+                        return items;
+                    }
+                } catch (e) {
+                    throw e;
+                }
+            }
+
+            await req(page);
+
+            return items;
+        } catch (e) {
+            Logger.error('[AMQP] getQueuesList error', e.message);
+            throw e;
+        }
+    }
+
+    /**
+     * Возвращает список очередей
+     * @param page
+     * @param name
+     */
+    public async getQueuesList1(page = 1, name = ''): Promise<any[]> {
          try {
 
             let items: any[] = [];
@@ -97,6 +155,7 @@ export class Rabbit {
     public async createConnection(): Promise<void> {
         try {
             const connectionLink = this.getConnectionLink();
+            console.log(connectionLink);
 
             const connection = await amqp.connect(connectionLink);
 

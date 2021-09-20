@@ -31,39 +31,43 @@ export class MessageCheckWorker extends BaseQueueWorker {
         const attemptIds: any = {};
 
         messages.forEach((message) => {
-            if (message.attempt < 5) {
+            if (message.attempt < Number(process.env.TRY_COUNT)) {
                 messageIds.push(message.id);
                 attemptIds[message.id] = message.attempt+1;
             }
         });
 
+        console.log('messages',messages,attemptIds);
 
-        console.log('pushToVkQueue - messages ',messages);
 
         if (messageIds.length > 0) {
-
-           // const Message = this.mongoProvider.collection("messages");
-
-            const result = {
-                message_ids: messageIds,
-                ids_attempt: attemptIds,
-                preview_length: 0,
-                extended: 1,
-                fields: null,
-                group_id: messages[0].vk_group_id,
+            let chanks = [];
+            let chunk = 100;
+            for (let i = 0; i < messageIds.length; i += chunk) {
+                chanks.push(messageIds.slice(i, i + chunk));
             }
+            let code = `var r = [], i = 0, t = {}, r=[], m=[];`;
+            for (let chank of chanks){
+                code += `m.push({message_ids:[${chank}]});`;
+            }
+            code += `while (i < m.length) {
+                    t =  API.messages.getById(m[i]);
+                    r.push(t);
+                    i = i + 1;
+                }
+                return r;`;
 
-            const r = {
+
+            const r1 = {
                 vk_group_id: messages[0].vk_group_id,
                 request: {
                     params: {
-                        message_ids: messageIds,//100
-                        preview_length: 224111,
-                        v: 5.78,
+                        code: code,
+                        v: 5.80,
                         lang: 'ru'
                     },
-                    url: 'https://api.vk.com/method/messages.getById',
-                    priority: 10
+                    url: 'https://api.vk.com/method/execute',
+                    priority: 4
                 },
 
                 callback: {
@@ -75,39 +79,8 @@ export class MessageCheckWorker extends BaseQueueWorker {
                 }
             };
 
-            // const code = `var i=0, h, result=[], users=" . json_encode($vk_ids) . ";
-            //         while (i < users.length) {
-            //             h = API.messages.getById({count: 1, offset: 0, extended: 1, start_message_id: -1, user_id: users[i]});
-            //             if (h.conversations[0].last_message_id <= h.conversations[0].out_read) {
-            //                 result.push(users[i]);
-            //             }
-            //             i = i + 1;
-            //         } return [result, h];`;
-            // const r = {
-            //     vk_group_id: messages[0].vk_group_id,
-            //     request: {
-            //         params: {
-            //             message_ids: messageIds,
-            //             preview_length: 224111,
-            //             v: 5.78,
-            //             lang: 'ru'
-            //         },
-            //         url: 'https://api.vk.com/method/execute',
-            //         priority: 10
-            //     },
-            //
-            //     callback: {
-            //         url:'bot_msg_check',
-            //         params: {
-            //             group_id:messages[0].group_id,
-            //             ids_attempt: attemptIds
-            //         }
-            //     }
-            // };
+            this.vkQueueResolver.sendToQueue(r1);
 
-
-            console.log('SEND MSGAG TO VK',r);
-            this.vkQueueResolver.sendToQueue(r);
-        }
+         }
     }
 }

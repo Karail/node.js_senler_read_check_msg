@@ -39,5 +39,5 @@ services:
     #   MONGO_INITDB_ROOT_PASSWORD: root
     # volumes:
     #   - ./docker/mongo-volume:/data/db
-    ports: 
+    ports:
       - "27017:27017"

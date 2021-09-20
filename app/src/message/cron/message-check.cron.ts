@@ -40,9 +40,11 @@ export class MessageCheckCron extends BaseCron {
 
             console.log('JOB messages',messages,messages.length < 100 && messages.length > 0);
 
-            if (messages.length < 100 && messages.length > 0) {
+            if (messages.length < Number(process.env.MSG_COUNT) && messages.length > 0) {
 
-                const messages = await this.redisProvider.spop(setName, 100);
+
+
+                const messages = await this.redisProvider.spop(setName, Number(process.env.MSG_COUNT));
 
 
 

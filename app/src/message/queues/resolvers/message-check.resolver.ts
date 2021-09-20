@@ -63,9 +63,9 @@ export class MessageCheckQueueResolver extends BaseQueueResolver {
                 if (permit === true) {
                     const messages = await this.redisProvider.smembers(setName);
 
-                    if (messages && messages.length > 100) {
+                    if (messages && messages.length > Number(process.env.MSG_COUNT)) {
 
-                        const messages = await this.redisProvider.spop(setName, 100);
+                        const messages = await this.redisProvider.spop(setName, Number(process.env.MSG_COUNT));
 
                         this.worker.pushToVkQueue(messages.map((message: any) => JSON.parse(message)));
                     }
