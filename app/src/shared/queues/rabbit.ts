@@ -130,7 +130,7 @@ export class Rabbit {
 
                     if (body?.items?.length > 0 && response.status === 200) {
                         items = [...items, ...body.items];
-                        req(page + 1);
+                        await req(page + 1);
                     } else {
                         return items;
                     }
